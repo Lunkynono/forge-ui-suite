@@ -6,30 +6,54 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowRight, FileText, Briefcase, Clock, CheckCircle2, XCircle, Loader2, Plus } from "lucide-react";
+import { ArrowRight, FileText, Briefcase, Clock, CheckCircle2, XCircle, Loader2, Plus, Search } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { AnalysisJob } from "@/hooks/useAnalysis";
 
-const Index = () => {
-  const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisJob | null>(null);
+interface AnalysisWithMeeting extends AnalysisJob {
+  meeting_title?: string;
+}
 
-  // Fetch all analyses
+const Index = () => {
+  const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisWithMeeting | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Fetch all analyses with meeting titles
   const { data: analyses, isLoading } = useQuery({
     queryKey: ['allAnalyses'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('analysis_jobs')
-        .select('*')
+        .select(`
+          *,
+          transcripts!inner(
+            meeting_id,
+            meetings!inner(
+              title
+            )
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as AnalysisJob[];
+      
+      // Transform the data to include meeting_title
+      return data.map(item => ({
+        ...item,
+        meeting_title: item.transcripts?.meetings?.title || 'Unknown Meeting'
+      })) as AnalysisWithMeeting[];
     },
   });
+
+  // Filter analyses by search query
+  const filteredAnalyses = analyses?.filter(analysis => 
+    analysis.meeting_title?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", icon: any }> = {
@@ -168,29 +192,50 @@ const Index = () => {
           <p className="text-muted-foreground">View and manage your meeting analyses</p>
         </div>
 
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by meeting name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        </div>
+
         {isLoading ? (
           <div className="space-y-4">
             <Skeleton className="h-32 w-full" />
             <Skeleton className="h-32 w-full" />
             <Skeleton className="h-32 w-full" />
           </div>
-        ) : !analyses || analyses.length === 0 ? (
+        ) : !filteredAnalyses || filteredAnalyses.length === 0 ? (
           <Card className="shadow-soft">
             <CardContent className="py-12">
-              <EmptyState
-                icon={FileText}
-                title="No analyses yet"
-                description="Get started by uploading a meeting transcript"
-                action={{
-                  label: "Upload Transcript",
-                  onClick: () => window.location.href = '/ingest'
-                }}
-              />
+              {searchQuery ? (
+                <EmptyState
+                  icon={Search}
+                  title="No analyses found"
+                  description={`No analyses match "${searchQuery}"`}
+                />
+              ) : (
+                <EmptyState
+                  icon={FileText}
+                  title="No analyses yet"
+                  description="Get started by uploading a meeting transcript"
+                  action={{
+                    label: "Upload Transcript",
+                    onClick: () => window.location.href = '/ingest'
+                  }}
+                />
+              )}
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-4">
-            {analyses.map((analysis) => (
+            {filteredAnalyses.map((analysis) => (
               <Card
                 key={analysis.id}
                 className="shadow-soft hover:shadow-md transition-shadow cursor-pointer"
@@ -198,12 +243,12 @@ const Index = () => {
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">
-                    <div>
+                    <div className="flex-1">
                       <CardTitle className="text-lg">
-                        Analysis {new Date(analysis.created_at).toLocaleString()}
+                        {analysis.meeting_title}
                       </CardTitle>
                       <CardDescription className="mt-1">
-                        Provider: {analysis.provider}
+                        Provider: {analysis.provider} • {new Date(analysis.created_at).toLocaleString()}
                       </CardDescription>
                     </div>
                     {getStatusBadge(analysis.status)}
