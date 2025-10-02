@@ -14,7 +14,223 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analysis_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          provider: string
+          result_json: Json | null
+          sales_report_md: string | null
+          status: Database["public"]["Enums"]["analysis_status"]
+          tech_report_md: string | null
+          transcript_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          provider?: string
+          result_json?: Json | null
+          sales_report_md?: string | null
+          status?: Database["public"]["Enums"]["analysis_status"]
+          tech_report_md?: string | null
+          transcript_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          provider?: string
+          result_json?: Json | null
+          sales_report_md?: string | null
+          status?: Database["public"]["Enums"]["analysis_status"]
+          tech_report_md?: string | null
+          transcript_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_jobs_transcript_id_fkey"
+            columns: ["transcript_id"]
+            isOneToOne: false
+            referencedRelation: "transcripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meetings: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          project_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          project_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          project_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          client_name: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          client_name?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          client_name?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      requirements: {
+        Row: {
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["requirement_kind"]
+          priority: Database["public"]["Enums"]["requirement_priority"]
+          project_id: string
+          requirement_id: string | null
+          source_quote: string | null
+          source_speaker: string | null
+          source_timestamp: string | null
+          text: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["requirement_kind"]
+          priority: Database["public"]["Enums"]["requirement_priority"]
+          project_id: string
+          requirement_id?: string | null
+          source_quote?: string | null
+          source_speaker?: string | null
+          source_timestamp?: string | null
+          text: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["requirement_kind"]
+          priority?: Database["public"]["Enums"]["requirement_priority"]
+          project_id?: string
+          requirement_id?: string | null
+          source_quote?: string | null
+          source_speaker?: string | null
+          source_timestamp?: string | null
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requirements_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      share_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          project_id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          project_id: string
+          token: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          project_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "share_tokens_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transcripts: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          language: string
+          meeting_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          language?: string
+          meeting_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          language?: string
+          meeting_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transcripts_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +239,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      analysis_status: "PENDING" | "PROCESSING" | "SUCCEEDED" | "FAILED"
+      requirement_kind: "NEED" | "WANT"
+      requirement_priority: "P0" | "P1" | "P2" | "P3"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +368,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      analysis_status: ["PENDING", "PROCESSING", "SUCCEEDED", "FAILED"],
+      requirement_kind: ["NEED", "WANT"],
+      requirement_priority: ["P0", "P1", "P2", "P3"],
+    },
   },
 } as const
