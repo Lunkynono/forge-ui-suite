@@ -9,13 +9,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useMockStore } from "@/store/useMockStore";
 import { AnalysisReportViewer } from "@/components/AnalysisReportViewer";
-import { BarChart3, Calendar, FileText, Settings, Share2, Sparkles, Clock, User, Filter } from "lucide-react";
+import { ShareDialog } from "@/components/ShareDialog";
+import { TranscriptPanel } from "@/components/TranscriptPanel";
+import { BarChart3, Calendar, FileText, Settings, Share2, Sparkles, Clock, User, Filter, Search, Printer, Info } from "lucide-react";
 import { toast } from "sonner";
 import type { AnalysisResult, RequirementItem } from "@/lib/analyzeTranscript.mock";
+import type { Transcript, Meeting } from "@/store/useMockStore";
 
 const ProjectDetail = () => {
   const { id } = useParams();
@@ -24,8 +29,12 @@ const ProjectDetail = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [requirementFilter, setRequirementFilter] = useState<"all" | "need" | "want">("all");
   const [priorityFilter, setPriorityFilter] = useState<"all" | "P0" | "P1" | "P2" | "P3">("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedRequirement, setSelectedRequirement] = useState<(RequirementItem & { type: 'need' | 'want' }) | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [selectedTranscript, setSelectedTranscript] = useState<Transcript | null>(null);
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
 
   const project = projects.find(p => p.id === id);
   const projectMeetings = project ? getProjectMeetings(project.id) : [];
@@ -74,12 +83,29 @@ const ProjectDetail = () => {
       ]
     : [];
 
-  // Apply filters
+  // Apply filters and search
   const filteredRequirements = allRequirements.filter(req => {
     if (requirementFilter !== 'all' && req.type !== requirementFilter) return false;
     if (priorityFilter !== 'all' && req.priority !== priorityFilter) return false;
+    if (searchQuery && !req.text.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
+
+  // Sort requirements: P0 > P1 > P2 > P3, then NEED > WANT
+  const sortedRequirements = [...filteredRequirements].sort((a, b) => {
+    const priorityOrder = { P0: 0, P1: 1, P2: 2, P3: 3 };
+    const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
+    if (priorityDiff !== 0) return priorityDiff;
+    
+    // If same priority, NEED comes before WANT
+    if (a.type === 'need' && b.type === 'want') return -1;
+    if (a.type === 'want' && b.type === 'need') return 1;
+    return 0;
+  });
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20">
@@ -91,11 +117,21 @@ const ProjectDetail = () => {
           description={project.description}
           actions={
             <>
-              <Button variant="outline" size="icon">
-                <Share2 className="h-4 w-4" />
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={handlePrint}
+                className="no-print"
+              >
+                <Printer className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon">
-                <Settings className="h-4 w-4" />
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => setShareDialogOpen(true)}
+                className="no-print"
+              >
+                <Share2 className="h-4 w-4" />
               </Button>
             </>
           }
@@ -189,20 +225,37 @@ const ProjectDetail = () => {
               <CardContent>
                 {projectMeetings.length > 0 ? (
                   <div className="space-y-3">
-                    {projectMeetings.slice(0, 5).map((meeting) => (
-                      <div
-                        key={meeting.id}
-                        className="flex items-center justify-between p-3 rounded-lg hover:bg-secondary/50 transition-colors"
-                      >
-                        <div className="flex-1">
-                          <h4 className="font-medium">{meeting.title}</h4>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(meeting.date).toLocaleDateString()} • {Math.floor(meeting.duration / 60)}m
-                          </p>
+                    {projectMeetings.slice(0, 5).map((meeting) => {
+                      const meetingTranscript = projectTranscripts.find(t => t.meetingId === meeting.id);
+                      return (
+                        <div
+                          key={meeting.id}
+                          className="flex items-center justify-between p-3 rounded-lg hover:bg-secondary/50 transition-colors"
+                        >
+                          <div className="flex-1">
+                            <h4 className="font-medium">{meeting.title}</h4>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(meeting.date).toLocaleDateString()} • {Math.floor(meeting.duration / 60)}m
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">{meeting.language.toUpperCase()}</Badge>
+                            {meetingTranscript && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedMeeting(meeting);
+                                  setSelectedTranscript(meetingTranscript);
+                                }}
+                              >
+                                View Transcript
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        <Badge variant="outline">{meeting.language.toUpperCase()}</Badge>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <EmptyState
@@ -282,36 +335,48 @@ const ProjectDetail = () => {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Filter className="h-5 w-5" />
-                      Filters
+                      Filters & Search
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex gap-4">
-                      <div className="flex-1">
-                        <Select value={requirementFilter} onValueChange={(v: any) => setRequirementFilter(v)}>
-                          <SelectTrigger className="bg-background">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-popover z-50">
-                            <SelectItem value="all">All Types</SelectItem>
-                            <SelectItem value="need">Needs Only</SelectItem>
-                            <SelectItem value="want">Wants Only</SelectItem>
-                          </SelectContent>
-                        </Select>
+                    <div className="space-y-4">
+                      <div className="flex gap-4">
+                        <div className="flex-1">
+                          <Select value={requirementFilter} onValueChange={(v: any) => setRequirementFilter(v)}>
+                            <SelectTrigger className="bg-background">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-popover z-50">
+                              <SelectItem value="all">All Types</SelectItem>
+                              <SelectItem value="need">Needs Only</SelectItem>
+                              <SelectItem value="want">Wants Only</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex-1">
+                          <Select value={priorityFilter} onValueChange={(v: any) => setPriorityFilter(v)}>
+                            <SelectTrigger className="bg-background">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-popover z-50">
+                              <SelectItem value="all">All Priorities</SelectItem>
+                              <SelectItem value="P0">P0 Only</SelectItem>
+                              <SelectItem value="P1">P1 Only</SelectItem>
+                              <SelectItem value="P2">P2 Only</SelectItem>
+                              <SelectItem value="P3">P3 Only</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <Select value={priorityFilter} onValueChange={(v: any) => setPriorityFilter(v)}>
-                          <SelectTrigger className="bg-background">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-popover z-50">
-                            <SelectItem value="all">All Priorities</SelectItem>
-                            <SelectItem value="P0">P0 Only</SelectItem>
-                            <SelectItem value="P1">P1 Only</SelectItem>
-                            <SelectItem value="P2">P2 Only</SelectItem>
-                            <SelectItem value="P3">P3 Only</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search requirements..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="pl-9"
+                        />
                       </div>
                     </div>
                   </CardContent>
@@ -320,10 +385,13 @@ const ProjectDetail = () => {
                 {/* Requirements Table */}
                 <Card className="shadow-soft">
                   <CardHeader>
-                    <CardTitle>Requirements ({filteredRequirements.length})</CardTitle>
+                    <CardTitle>Requirements ({sortedRequirements.length})</CardTitle>
+                    <CardDescription>
+                      Sorted by priority (P0 → P3), then by type (Needs → Wants)
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {filteredRequirements.length > 0 ? (
+                    {sortedRequirements.length > 0 ? (
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -336,7 +404,7 @@ const ProjectDetail = () => {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filteredRequirements.map((req, idx) => (
+                          {sortedRequirements.map((req, idx) => (
                             <TableRow key={idx}>
                               <TableCell>
                                 <Badge variant={req.type === 'need' ? 'default' : 'secondary'}>
@@ -404,10 +472,19 @@ const ProjectDetail = () => {
                 </CardContent>
               </Card>
             ) : (
-              <AnalysisReportViewer
-                analysis={analysisResults}
-                analysisId={requirementsAnalysis?.id || 'default'}
-              />
+              <>
+                <Alert className="mb-6">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    This specification is based on the latest analysis of transcript from{' '}
+                    {new Date(requirementsAnalysis?.createdAt || '').toLocaleDateString()}
+                  </AlertDescription>
+                </Alert>
+                <AnalysisReportViewer
+                  analysis={analysisResults}
+                  analysisId={requirementsAnalysis?.id || 'default'}
+                />
+              </>
             )}
           </TabsContent>
 
@@ -428,13 +505,36 @@ const ProjectDetail = () => {
                 </CardContent>
               </Card>
             ) : (
-              <AnalysisReportViewer
-                analysis={analysisResults}
-                analysisId={requirementsAnalysis?.id || 'default'}
-              />
+              <>
+                <Alert className="mb-6">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    This brief is based on the latest analysis of transcript from{' '}
+                    {new Date(requirementsAnalysis?.createdAt || '').toLocaleDateString()}
+                  </AlertDescription>
+                </Alert>
+                <AnalysisReportViewer
+                  analysis={analysisResults}
+                  analysisId={requirementsAnalysis?.id || 'default'}
+                />
+              </>
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Dialogs */}
+        <ShareDialog
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+          projectId={project.id}
+          projectName={project.name}
+        />
+
+        <TranscriptPanel
+          open={!!selectedTranscript}
+          onOpenChange={(open) => !open && setSelectedTranscript(null)}
+          transcript={selectedTranscript}
+        />
 
         {/* View Source Dialog */}
         <Dialog open={!!selectedRequirement} onOpenChange={() => setSelectedRequirement(null)}>

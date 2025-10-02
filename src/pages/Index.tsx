@@ -1,12 +1,21 @@
+import { useEffect } from "react";
 import { Navigation } from "@/components/Navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useProjectStore } from "@/store/projectStore";
 import { ArrowRight, Database, FileText, TrendingUp, Zap } from "lucide-react";
 
 const Index = () => {
   const { projects } = useProjectStore();
+  const navigate = useNavigate();
+
+  // Redirect to single project if only one exists
+  useEffect(() => {
+    if (projects.length === 1) {
+      navigate(`/projects/${projects[0].id}`);
+    }
+  }, [projects, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20">

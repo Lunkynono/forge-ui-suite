@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 import { FileText, Sparkles, Upload, Clock } from "lucide-react";
 import { useMockStore } from "@/store/useMockStore";
 import { toast } from "sonner";
@@ -25,15 +26,17 @@ const transcriptSchema = z.object({
 
 const Ingest = () => {
   const navigate = useNavigate();
-  const { transcripts, meetings, currentProject, addTranscript, runMockAnalysis } = useMockStore();
+  const { transcripts, meetings, currentProject, addTranscript, addMeeting, runMockAnalysis, loadExampleTranscripts } = useMockStore();
   
   const [content, setContent] = useState("");
   const [language, setLanguage] = useState("");
   const [meetingId, setMeetingId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newMeetingTitle, setNewMeetingTitle] = useState("");
+  const [showNewMeeting, setShowNewMeeting] = useState(false);
   
-  // Get sample transcripts (first 3)
-  const sampleTranscripts = transcripts.slice(0, 3);
+  // Get sample transcripts - filter for examples only
+  const sampleTranscripts = transcripts.filter(t => t.metadata.source === 'example').slice(0, 2);
   
   // Get meetings for current project
   const projectMeetings = meetings.filter(m => m.projectId === currentProject);
@@ -42,6 +45,34 @@ const Ingest = () => {
     toast.loading("Running analysis...", { id: transcriptId });
     await runMockAnalysis(transcriptId, "sentiment");
     toast.success("Analysis complete!", { id: transcriptId });
+  };
+
+  const handleCreateMeeting = () => {
+    if (!newMeetingTitle.trim()) {
+      toast.error("Please enter a meeting title");
+      return;
+    }
+
+    if (!currentProject) {
+      toast.error("No project selected");
+      return;
+    }
+
+    addMeeting({
+      projectId: currentProject,
+      title: newMeetingTitle,
+      date: new Date().toISOString(),
+      duration: 0,
+      participants: [],
+      transcriptIds: [],
+      status: 'scheduled',
+      language: language || 'en',
+    });
+
+    // The meeting will be added to the store, just clear the form
+    setNewMeetingTitle("");
+    setShowNewMeeting(false);
+    toast.success("Meeting created!");
   };
 
   const handleSubmit = async () => {
@@ -180,8 +211,16 @@ const Ingest = () => {
                 })}
                 
                 {sampleTranscripts.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No sample transcripts available
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground mb-4">No example transcripts loaded</p>
+                    <Button 
+                      variant="outline" 
+                      onClick={loadExampleTranscripts}
+                      className="gap-2"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Load Examples
+                    </Button>
                   </div>
                 )}
               </div>
@@ -220,23 +259,56 @@ const Ingest = () => {
 
                 {/* Meeting Select */}
                 <div className="space-y-2">
-                  <Label htmlFor="meeting">Meeting</Label>
-                  <Select value={meetingId} onValueChange={setMeetingId}>
-                    <SelectTrigger id="meeting" className="bg-background">
-                      <SelectValue placeholder="Select meeting" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover z-50">
-                      {projectMeetings.map((meeting) => (
-                        <SelectItem key={meeting.id} value={meeting.id}>
-                          {meeting.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {projectMeetings.length === 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      No meetings found for current project
-                    </p>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="meeting">Meeting</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowNewMeeting(!showNewMeeting)}
+                      className="h-auto py-1 px-2 text-xs"
+                    >
+                      {showNewMeeting ? 'Select Existing' : '+ Create New'}
+                    </Button>
+                  </div>
+
+                  {showNewMeeting ? (
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="New meeting title..."
+                        value={newMeetingTitle}
+                        onChange={(e) => setNewMeetingTitle(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleCreateMeeting}
+                        disabled={!newMeetingTitle.trim()}
+                      >
+                        Create
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <Select value={meetingId} onValueChange={setMeetingId}>
+                        <SelectTrigger id="meeting" className="bg-background">
+                          <SelectValue placeholder="Select meeting" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover z-50">
+                          {projectMeetings.map((meeting) => (
+                            <SelectItem key={meeting.id} value={meeting.id}>
+                              {meeting.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {projectMeetings.length === 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          No meetings found. Create a new one above.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
 

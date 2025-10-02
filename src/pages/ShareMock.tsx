@@ -1,10 +1,44 @@
 import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Database, Download, ExternalLink } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Database, Printer } from "lucide-react";
+import { useMockStore } from "@/store/useMockStore";
+import { AnalysisReportViewer } from "@/components/AnalysisReportViewer";
+import type { AnalysisResult } from "@/lib/analyzeTranscript.mock";
 
 const ShareMock = () => {
   const { slug } = useParams();
+  const { projects, analyses } = useMockStore();
+  
+  // Extract project ID from slug (format: "project-name-id")
+  const projectId = slug?.split('-').pop() || '';
+  const project = projects.find(p => p.id === projectId);
+  
+  const requirementsAnalysis = analyses.find(
+    a => a.projectId === projectId && a.type === 'requirements' && a.status === 'completed'
+  );
+  
+  const analysisResults = requirementsAnalysis?.results as AnalysisResult | undefined;
+  
+  const allRequirements = analysisResults 
+    ? [
+        ...analysisResults.needs.map(n => ({ ...n, type: 'need' as const })),
+        ...analysisResults.wants.map(w => ({ ...w, type: 'want' as const }))
+      ]
+    : [];
+
+  if (!project) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Project Not Found</h1>
+          <p className="text-muted-foreground">The shared project doesn't exist.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary/20">
@@ -18,84 +52,73 @@ const ShareMock = () => {
         </div>
       </nav>
 
-      <main className="container max-w-4xl px-4 py-12">
-        {/* Share Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold mb-2">Shared Data View</h1>
-          <p className="text-muted-foreground">
-            View-only access to: <span className="font-medium">{slug}</span>
-          </p>
+      <main className="container max-w-6xl px-4 py-12">
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold mb-2">{project.name}</h1>
+              <p className="text-muted-foreground">{project.description}</p>
+            </div>
+            <Button onClick={() => window.print()} variant="outline" className="no-print">
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
+          </div>
         </div>
 
-        {/* Shared Content */}
-        <Card className="shadow-elegant mb-6">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Dataset Overview</CardTitle>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export
-                </Button>
-                <Button variant="outline" size="sm">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Open Full
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {/* Sample Data Table */}
-              <div className="border rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-secondary">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium">ID</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Name</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Value</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <tr key={i} className="hover:bg-secondary/50">
-                        <td className="px-4 py-3 text-sm">{i}</td>
-                        <td className="px-4 py-3 text-sm">Item {i}</td>
-                        <td className="px-4 py-3 text-sm">${(Math.random() * 1000).toFixed(2)}</td>
-                        <td className="px-4 py-3 text-sm">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            Active
-                          </span>
-                        </td>
-                      </tr>
+        {analysisResults ? (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Requirements</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Requirement</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {allRequirements.slice(0, 20).map((req, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell>
+                          <Badge variant={req.type === 'need' ? 'default' : 'secondary'}>
+                            {req.type.toUpperCase()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={req.priority === 'P0' ? 'destructive' : 'outline'}>
+                            {req.priority}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{req.category}</TableCell>
+                        <TableCell className="max-w-md">{req.text}</TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
 
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-4 pt-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold">1,234</p>
-                  <p className="text-xs text-muted-foreground">Total Records</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">5</p>
-                  <p className="text-xs text-muted-foreground">Columns</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">24h</p>
-                  <p className="text-xs text-muted-foreground">Last Updated</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <AnalysisReportViewer
+              analysis={analysisResults}
+              analysisId={requirementsAnalysis?.id || 'shared'}
+            />
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">No analysis available for this project yet.</p>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Footer Note */}
-        <p className="text-center text-sm text-muted-foreground">
-          This is a read-only shared view. Contact the owner for full access.
+        <p className="text-center text-sm text-muted-foreground mt-8">
+          This is a read-only shared view.
         </p>
       </main>
     </div>
