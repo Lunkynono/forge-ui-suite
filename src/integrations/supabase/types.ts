@@ -20,6 +20,7 @@ export type Database = {
           created_at: string
           error_message: string | null
           id: string
+          name: string | null
           provider: string
           result_json: Json | null
           sales_report_md: string | null
@@ -32,6 +33,7 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: string
+          name?: string | null
           provider?: string
           result_json?: Json | null
           sales_report_md?: string | null
@@ -44,6 +46,7 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: string
+          name?: string | null
           provider?: string
           result_json?: Json | null
           sales_report_md?: string | null

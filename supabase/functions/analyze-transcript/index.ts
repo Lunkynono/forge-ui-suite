@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
     // 1. Load transcript
     const { data: transcript, error: transcriptError } = await supabase
       .from('transcripts')
-      .select('*, meetings(project_id)')
+      .select('*, meetings(project_id, title)')
       .eq('id', transcriptId)
       .single();
 
@@ -181,6 +181,7 @@ Deno.serve(async (req) => {
     }
 
     const projectId = (transcript.meetings as any).project_id;
+    const meetingTitle = (transcript.meetings as any).title;
 
     // 2. Create analysis job
     const { data: job, error: jobError } = await supabase
@@ -189,6 +190,7 @@ Deno.serve(async (req) => {
         transcript_id: transcriptId,
         status: 'PROCESSING',
         provider: 'GRANITE',
+        name: meetingTitle || `Analysis ${new Date().toLocaleDateString()}`,
       })
       .select()
       .single();

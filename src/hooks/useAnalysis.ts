@@ -12,6 +12,7 @@ export interface AnalysisJob {
   error_message?: string;
   created_at: string;
   completed_at?: string;
+  name?: string;
 }
 
 export function useAnalysisJob(jobId: string) {

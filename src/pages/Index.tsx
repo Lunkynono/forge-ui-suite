@@ -16,43 +16,31 @@ import remarkGfm from "remark-gfm";
 import type { AnalysisJob } from "@/hooks/useAnalysis";
 
 interface AnalysisWithMeeting extends AnalysisJob {
-  meeting_title?: string;
+  name?: string;
 }
 
 const Index = () => {
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisWithMeeting | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Fetch all analyses with meeting titles
+  // Fetch all analyses
   const { data: analyses, isLoading } = useQuery({
     queryKey: ['allAnalyses'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('analysis_jobs')
-        .select(`
-          *,
-          transcripts!inner(
-            meeting_id,
-            meetings!inner(
-              title
-            )
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
-      // Transform the data to include meeting_title
-      return data.map(item => ({
-        ...item,
-        meeting_title: item.transcripts?.meetings?.title || 'Unknown Meeting'
-      })) as AnalysisWithMeeting[];
+      return data as AnalysisWithMeeting[];
     },
   });
 
   // Filter analyses by search query
   const filteredAnalyses = analyses?.filter(analysis => 
-    analysis.meeting_title?.toLowerCase().includes(searchQuery.toLowerCase())
+    analysis.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getStatusBadge = (status: string) => {
@@ -91,7 +79,7 @@ const Index = () => {
 
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">
-              Analysis from {new Date(selectedAnalysis.created_at).toLocaleDateString()}
+              {selectedAnalysis.name || `Analysis from ${new Date(selectedAnalysis.created_at).toLocaleDateString()}`}
             </h1>
             <p className="text-muted-foreground">
               Provider: {selectedAnalysis.provider} • Status: {selectedAnalysis.status}
@@ -197,7 +185,7 @@ const Index = () => {
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by meeting name..."
+              placeholder="Search by analysis name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -245,7 +233,7 @@ const Index = () => {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle className="text-lg">
-                        {analysis.meeting_title}
+                        {analysis.name || `Analysis ${new Date(analysis.created_at).toLocaleDateString()}`}
                       </CardTitle>
                       <CardDescription className="mt-1">
                         Provider: {analysis.provider} • {new Date(analysis.created_at).toLocaleString()}
