@@ -41,35 +41,36 @@ export const AnalysisReportViewer = ({ analysis, analysisId }: AnalysisReportVie
   const [activeTab, setActiveTab] = useState("tech");
 
   return (
-    <Card className="shadow-elegant">
-      <CardHeader>
-        <CardTitle>Analysis Reports</CardTitle>
+    <Card className="shadow-elegant border-2">
+      <CardHeader className="border-b bg-secondary/30">
+        <CardTitle className="text-2xl">Analysis Reports</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="tech" className="gap-2">
-              <FileText className="h-4 w-4" />
-              Tech Spec
+          <TabsList className="grid w-full grid-cols-2 h-12">
+            <TabsTrigger value="tech" className="gap-2 text-base">
+              <FileText className="h-5 w-5" />
+              Technical Specifications
             </TabsTrigger>
-            <TabsTrigger value="sales" className="gap-2">
-              <Briefcase className="h-4 w-4" />
+            <TabsTrigger value="sales" className="gap-2 text-base">
+              <Briefcase className="h-5 w-5" />
               Sales Brief
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="tech" className="mt-6">
-            <div className="prose prose-sm max-w-none dark:prose-invert">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {analysis.techReportMd}
-              </ReactMarkdown>
+          <TabsContent value="tech" className="mt-8">
+            <div className="bg-secondary/10 rounded-lg p-6 border">
+              <div className="prose prose-base max-w-none dark:prose-invert prose-headings:text-primary prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-p:leading-relaxed prose-li:leading-relaxed prose-strong:text-foreground">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {analysis.techReportMd}
+                </ReactMarkdown>
+              </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="sales" className="mt-6">
-            <div className="space-y-6">
-              {/* Render sales report markdown */}
-              <div className="prose prose-sm max-w-none dark:prose-invert">
+          <TabsContent value="sales" className="mt-8">
+            <div className="bg-secondary/10 rounded-lg p-6 border">
+              <div className="prose prose-base max-w-none dark:prose-invert prose-headings:text-primary prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-p:leading-relaxed prose-li:leading-relaxed prose-strong:text-foreground">
                 <ReactMarkdown 
                   remarkPlugins={[remarkGfm]}
                   components={{
@@ -80,11 +81,12 @@ export const AnalysisReportViewer = ({ analysis, analysisId }: AnalysisReportVie
                       
                       if (isNextSteps) {
                         return (
-                          <div className="space-y-3 not-prose my-4">
+                          <div className="space-y-3 not-prose my-6 bg-background rounded-lg p-4 border-2 border-primary/20">
+                            <h4 className="font-semibold text-lg mb-4 text-primary">Action Items</h4>
                             {NEXT_STEPS_ITEMS.map((stepId) => {
                               const stepKey = `${analysisId}-${stepId}`;
                               return (
-                                <div key={stepId} className="flex items-start gap-3">
+                                <div key={stepId} className="flex items-start gap-3 p-2 hover:bg-secondary/50 rounded transition-colors">
                                   <Checkbox
                                     id={stepKey}
                                     checked={nextSteps[stepKey] || false}
@@ -93,7 +95,7 @@ export const AnalysisReportViewer = ({ analysis, analysisId }: AnalysisReportVie
                                   />
                                   <Label
                                     htmlFor={stepKey}
-                                    className="text-sm font-normal cursor-pointer leading-tight"
+                                    className="text-sm font-normal cursor-pointer leading-relaxed"
                                   >
                                     {NEXT_STEPS_LABELS[stepId as keyof typeof NEXT_STEPS_LABELS]}
                                   </Label>

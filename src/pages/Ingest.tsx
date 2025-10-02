@@ -14,7 +14,7 @@ import { FileText, Sparkles, Upload, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { useMeetings } from "@/hooks/useMeetings";
+import { useMeetings, useCreateMeeting } from "@/hooks/useMeetings";
 import { useTranscripts } from "@/hooks/useTranscripts";
 import { useStartAnalysis } from "@/hooks/useAnalysis";
 import { useProjects } from "@/hooks/useProjects";
@@ -36,6 +36,7 @@ const Ingest = () => {
   const { data: meetings = [] } = useMeetings(currentProject?.id || '');
   const { data: transcripts = [] } = useTranscripts(currentProject?.id || '');
   const startAnalysis = useStartAnalysis();
+  const createMeeting = useCreateMeeting();
   
   const [content, setContent] = useState("");
   const [language, setLanguage] = useState("en");
@@ -73,19 +74,13 @@ const Ingest = () => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('meetings')
-        .insert({
-          project_id: currentProject.id,
-          title: newMeetingTitle,
-          date: new Date().toISOString(),
-        })
-        .select()
-        .single();
+      const meeting = await createMeeting.mutateAsync({
+        project_id: currentProject.id,
+        title: newMeetingTitle,
+        date: new Date().toISOString(),
+      });
 
-      if (error) throw error;
-
-      setMeetingId(data.id);
+      setMeetingId(meeting.id);
       setNewMeetingTitle("");
       setShowNewMeeting(false);
       toast.success("Meeting created!");

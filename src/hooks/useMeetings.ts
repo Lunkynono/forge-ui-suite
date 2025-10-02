@@ -10,6 +10,8 @@ export interface Meeting {
 }
 
 export function useMeetings(projectId: string) {
+  const queryClient = useQueryClient();
+
   return useQuery({
     queryKey: ['meetings', projectId],
     queryFn: async () => {
@@ -40,8 +42,9 @@ export function useCreateMeeting() {
       if (error) throw error;
       return data as Meeting;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['meetings', variables.project_id] });
+      return data;
     },
   });
 }
