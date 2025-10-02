@@ -1,0 +1,35 @@
+[
+  {
+    "id": "proj-1",
+    "name": "FinTech Iberia",
+    "description": "Financial technology expansion in Spanish and Portuguese markets",
+    "language": "es",
+    "createdAt": "2025-01-15T10:30:00Z",
+    "updatedAt": "2025-03-25T14:22:00Z",
+    "status": "active",
+    "meetingCount": 8,
+    "transcriptCount": 12
+  },
+  {
+    "id": "proj-2",
+    "name": "Tech Retail",
+    "description": "Digital transformation initiative for retail technology solutions",
+    "language": "en",
+    "createdAt": "2025-02-20T09:00:00Z",
+    "updatedAt": "2025-03-26T11:15:00Z",
+    "status": "active",
+    "meetingCount": 5,
+    "transcriptCount": 8
+  },
+  {
+    "id": "proj-3",
+    "name": "Analytics Dashboard",
+    "description": "Main analytics project for business intelligence",
+    "language": "en",
+    "createdAt": "2025-01-10T08:00:00Z",
+    "updatedAt": "2025-03-20T16:45:00Z",
+    "status": "active",
+    "meetingCount": 12,
+    "transcriptCount": 18
+  }
+]

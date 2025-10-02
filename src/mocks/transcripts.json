@@ -1,0 +1,240 @@
+[
+  {
+    "id": "trans-1",
+    "meetingId": "meet-1",
+    "projectId": "proj-1",
+    "title": "Reunión de Estrategia Q1 - Parte 1",
+    "language": "es",
+    "duration": 1800,
+    "wordCount": 2450,
+    "createdAt": "2025-03-15T15:00:00Z",
+    "status": "processed",
+    "content": "Carlos: Buenos días a todos. Hoy vamos a revisar nuestra estrategia para el primer trimestre en el mercado ibérico. María: Gracias Carlos. He preparado un análisis detallado de las oportunidades en fintech. Juan: Perfecto. ¿Podemos empezar con el análisis de competencia? María: Claro. En España, vemos tres competidores principales...",
+    "speakers": [
+      {
+        "id": "spk-1",
+        "name": "Carlos Rodríguez",
+        "segments": 15
+      },
+      {
+        "id": "spk-2",
+        "name": "María García",
+        "segments": 22
+      },
+      {
+        "id": "spk-3",
+        "name": "Juan López",
+        "segments": 18
+      }
+    ],
+    "metadata": {
+      "recordingQuality": "high",
+      "source": "zoom",
+      "version": 1
+    }
+  },
+  {
+    "id": "trans-2",
+    "meetingId": "meet-1",
+    "projectId": "proj-1",
+    "title": "Reunión de Estrategia Q1 - Parte 2",
+    "language": "es",
+    "duration": 1800,
+    "wordCount": 2280,
+    "createdAt": "2025-03-15T15:30:00Z",
+    "status": "processed",
+    "content": "Juan: Continuando con el análisis de regulación en Portugal... Carlos: Sí, es importante destacar que el Banco de Portugal ha actualizado sus directrices. María: Esto representa una oportunidad excelente para nuestros servicios de compliance. Juan: Exactamente. Propongo que desarrollemos una solución específica...",
+    "speakers": [
+      {
+        "id": "spk-1",
+        "name": "Carlos Rodríguez",
+        "segments": 12
+      },
+      {
+        "id": "spk-2",
+        "name": "María García",
+        "segments": 19
+      },
+      {
+        "id": "spk-3",
+        "name": "Juan López",
+        "segments": 16
+      }
+    ],
+    "metadata": {
+      "recordingQuality": "high",
+      "source": "zoom",
+      "version": 1
+    }
+  },
+  {
+    "id": "trans-3",
+    "meetingId": "meet-2",
+    "projectId": "proj-1",
+    "title": "Análisis de Mercado - Portugal",
+    "language": "es",
+    "duration": 2700,
+    "wordCount": 3120,
+    "createdAt": "2025-03-20T10:30:00Z",
+    "status": "processed",
+    "content": "Ana: Bom dia. Vamos discutir as oportunidades no mercado português. Carlos: Gracias Ana. Tu experiencia en el mercado portugués es invaluable. Pedro: He identificado tres sectores clave donde podemos expandirnos. Ana: Excelente. El sector bancario portugués está muy receptivo a nuevas tecnologías...",
+    "speakers": [
+      {
+        "id": "spk-4",
+        "name": "Ana Silva",
+        "segments": 25
+      },
+      {
+        "id": "spk-1",
+        "name": "Carlos Rodríguez",
+        "segments": 14
+      },
+      {
+        "id": "spk-5",
+        "name": "Pedro Santos",
+        "segments": 20
+      }
+    ],
+    "metadata": {
+      "recordingQuality": "high",
+      "source": "teams",
+      "version": 1
+    }
+  },
+  {
+    "id": "trans-4",
+    "meetingId": "meet-3",
+    "projectId": "proj-2",
+    "title": "Product Roadmap Review - Session 1",
+    "language": "en",
+    "duration": 2250,
+    "wordCount": 3450,
+    "createdAt": "2025-03-18T14:00:00Z",
+    "status": "processed",
+    "content": "Sarah: Good afternoon everyone. Today we're reviewing our product roadmap for the retail technology suite. Michael: Thanks Sarah. I've prepared the technical feasibility analysis. Emily: Great. Let's start with the customer analytics module. Sarah: That's our priority item. We need to deliver this by Q2. Michael: I agree. The architecture is ready, and we can begin development next week...",
+    "speakers": [
+      {
+        "id": "spk-6",
+        "name": "Sarah Johnson",
+        "segments": 28
+      },
+      {
+        "id": "spk-7",
+        "name": "Michael Chen",
+        "segments": 22
+      },
+      {
+        "id": "spk-8",
+        "name": "Emily White",
+        "segments": 24
+      }
+    ],
+    "metadata": {
+      "recordingQuality": "high",
+      "source": "meet",
+      "version": 1
+    }
+  },
+  {
+    "id": "trans-5",
+    "meetingId": "meet-3",
+    "projectId": "proj-2",
+    "title": "Product Roadmap Review - Session 2",
+    "language": "en",
+    "duration": 2250,
+    "wordCount": 3280,
+    "createdAt": "2025-03-18T14:37:30Z",
+    "status": "processed",
+    "content": "Emily: Moving on to the inventory management features... Michael: The integration with existing POS systems is critical here. Sarah: Absolutely. We've received feedback from three major retailers about this. Emily: What are their main concerns? Michael: Performance at scale and real-time synchronization. Sarah: We'll need to prioritize the performance optimization sprint...",
+    "speakers": [
+      {
+        "id": "spk-6",
+        "name": "Sarah Johnson",
+        "segments": 26
+      },
+      {
+        "id": "spk-7",
+        "name": "Michael Chen",
+        "segments": 20
+      },
+      {
+        "id": "spk-8",
+        "name": "Emily White",
+        "segments": 25
+      }
+    ],
+    "metadata": {
+      "recordingQuality": "high",
+      "source": "meet",
+      "version": 1
+    }
+  },
+  {
+    "id": "trans-6",
+    "meetingId": "meet-4",
+    "projectId": "proj-2",
+    "title": "Customer Feedback Session",
+    "language": "en",
+    "duration": 3000,
+    "wordCount": 4120,
+    "createdAt": "2025-03-22T16:00:00Z",
+    "status": "processed",
+    "content": "David: Thank you all for joining today's customer feedback session. Sarah: We have some excellent insights from our beta customers. Lisa: I've compiled the survey results and interview transcripts. David: Perfect. Let's start with the most common feedback themes. Lisa: The top request is definitely better mobile experience. Sarah: That aligns with our roadmap. We're prioritizing mobile in Q2...",
+    "speakers": [
+      {
+        "id": "spk-9",
+        "name": "David Brown",
+        "segments": 18
+      },
+      {
+        "id": "spk-6",
+        "name": "Sarah Johnson",
+        "segments": 22
+      },
+      {
+        "id": "spk-10",
+        "name": "Lisa Taylor",
+        "segments": 24
+      }
+    ],
+    "metadata": {
+      "recordingQuality": "medium",
+      "source": "zoom",
+      "version": 1
+    }
+  },
+  {
+    "id": "trans-7",
+    "meetingId": "meet-5",
+    "projectId": "proj-3",
+    "title": "Sprint Planning",
+    "language": "en",
+    "duration": 3600,
+    "wordCount": 4580,
+    "createdAt": "2025-03-25T09:00:00Z",
+    "status": "processed",
+    "content": "Alex: Good morning team. Let's plan our next sprint. Jennifer: I've reviewed the backlog and prioritized items. Tom: Great. What are the high-priority features? Alex: We need to focus on the analytics dashboard improvements. Jennifer: Agreed. And we should include the export functionality. Tom: That's been requested by multiple clients...",
+    "speakers": [
+      {
+        "id": "spk-11",
+        "name": "Alex Kumar",
+        "segments": 26
+      },
+      {
+        "id": "spk-12",
+        "name": "Jennifer Lee",
+        "segments": 24
+      },
+      {
+        "id": "spk-13",
+        "name": "Tom Wilson",
+        "segments": 22
+      }
+    ],
+    "metadata": {
+      "recordingQuality": "high",
+      "source": "teams",
+      "version": 1
+    }
+  }
+]

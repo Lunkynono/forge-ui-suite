@@ -1,0 +1,57 @@
+[
+  {
+    "id": "meet-1",
+    "projectId": "proj-1",
+    "title": "Reunión de Estrategia Q1",
+    "date": "2025-03-15T15:00:00Z",
+    "duration": 3600,
+    "participants": ["Carlos Rodríguez", "María García", "Juan López"],
+    "transcriptIds": ["trans-1", "trans-2"],
+    "status": "completed",
+    "language": "es"
+  },
+  {
+    "id": "meet-2",
+    "projectId": "proj-1",
+    "title": "Análisis de Mercado - Portugal",
+    "date": "2025-03-20T10:30:00Z",
+    "duration": 2700,
+    "participants": ["Ana Silva", "Carlos Rodríguez", "Pedro Santos"],
+    "transcriptIds": ["trans-3"],
+    "status": "completed",
+    "language": "es"
+  },
+  {
+    "id": "meet-3",
+    "projectId": "proj-2",
+    "title": "Product Roadmap Review",
+    "date": "2025-03-18T14:00:00Z",
+    "duration": 4500,
+    "participants": ["Sarah Johnson", "Michael Chen", "Emily White"],
+    "transcriptIds": ["trans-4", "trans-5"],
+    "status": "completed",
+    "language": "en"
+  },
+  {
+    "id": "meet-4",
+    "projectId": "proj-2",
+    "title": "Customer Feedback Session",
+    "date": "2025-03-22T16:00:00Z",
+    "duration": 3000,
+    "participants": ["David Brown", "Sarah Johnson", "Lisa Taylor"],
+    "transcriptIds": ["trans-6"],
+    "status": "completed",
+    "language": "en"
+  },
+  {
+    "id": "meet-5",
+    "projectId": "proj-3",
+    "title": "Sprint Planning",
+    "date": "2025-03-25T09:00:00Z",
+    "duration": 3600,
+    "participants": ["Alex Kumar", "Jennifer Lee", "Tom Wilson"],
+    "transcriptIds": ["trans-7"],
+    "status": "completed",
+    "language": "en"
+  }
+]

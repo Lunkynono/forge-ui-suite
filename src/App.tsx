@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,10 +9,24 @@ import Ingest from "./pages/Ingest";
 import ProjectDetail from "./pages/ProjectDetail";
 import ShareMock from "./pages/ShareMock";
 import NotFound from "./pages/NotFound";
+import { useMockStore } from "./store/useMockStore";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  // Initialize mock store on app start
+  const mockStore = useMockStore();
+  
+  useEffect(() => {
+    console.log('Mock data loaded:', {
+      projects: mockStore.projects.length,
+      meetings: mockStore.meetings.length,
+      transcripts: mockStore.transcripts.length,
+      analyses: mockStore.analyses.length,
+    });
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -28,6 +43,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

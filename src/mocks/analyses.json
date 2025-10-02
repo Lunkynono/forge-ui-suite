@@ -1,0 +1,76 @@
+[
+  {
+    "id": "analysis-1",
+    "transcriptId": "trans-1",
+    "projectId": "proj-1",
+    "type": "sentiment",
+    "status": "completed",
+    "createdAt": "2025-03-15T16:00:00Z",
+    "results": {
+      "overall": "positive",
+      "score": 0.78,
+      "breakdown": {
+        "positive": 0.65,
+        "neutral": 0.28,
+        "negative": 0.07
+      }
+    }
+  },
+  {
+    "id": "analysis-2",
+    "transcriptId": "trans-4",
+    "projectId": "proj-2",
+    "type": "topics",
+    "status": "completed",
+    "createdAt": "2025-03-18T15:30:00Z",
+    "results": {
+      "topics": [
+        {
+          "name": "Product Development",
+          "confidence": 0.92,
+          "mentions": 24
+        },
+        {
+          "name": "Customer Analytics",
+          "confidence": 0.88,
+          "mentions": 18
+        },
+        {
+          "name": "Technical Architecture",
+          "confidence": 0.85,
+          "mentions": 15
+        }
+      ]
+    }
+  },
+  {
+    "id": "analysis-3",
+    "transcriptId": "trans-6",
+    "projectId": "proj-2",
+    "type": "action_items",
+    "status": "completed",
+    "createdAt": "2025-03-22T17:15:00Z",
+    "results": {
+      "items": [
+        {
+          "text": "Prioritize mobile experience improvements for Q2",
+          "assignee": "Sarah Johnson",
+          "priority": "high",
+          "dueDate": "2025-04-15"
+        },
+        {
+          "text": "Compile detailed survey results report",
+          "assignee": "Lisa Taylor",
+          "priority": "medium",
+          "dueDate": "2025-03-30"
+        },
+        {
+          "text": "Schedule follow-up with beta customers",
+          "assignee": "David Brown",
+          "priority": "medium",
+          "dueDate": "2025-04-05"
+        }
+      ]
+    }
+  }
+]
