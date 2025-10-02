@@ -29,39 +29,15 @@ const ProjectDetail = () => {
   const { data: meetings = [] } = useMeetings(id || '');
   const { data: transcripts = [] } = useTranscripts(id || '');
   const { data: requirements = [] } = useRequirements(id || '');
-  const startAnalysis = useStartAnalysis();
   
   const project = projects?.find(p => p.id === id);
-  const firstTranscript = transcripts[0];
-  const { data: latestAnalysis, isLoading: analysisLoading } = useLatestAnalysis(firstTranscript?.id || '');
   
   const [activeTab, setActiveTab] = useState("overview");
   const [requirementFilter, setRequirementFilter] = useState<"all" | "NEED" | "WANT">("all");
   const [priorityFilter, setPriorityFilter] = useState<"all" | "P0" | "P1" | "P2" | "P3">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRequirement, setSelectedRequirement] = useState<any | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
-
-  const handleRunAnalysis = async () => {
-    if (!firstTranscript) {
-      toast.error("No transcripts available for analysis");
-      return;
-    }
-
-    setIsAnalyzing(true);
-    toast.loading("Starting analysis...", { id: 'analysis' });
-    
-    try {
-      await startAnalysis.mutateAsync(firstTranscript.id);
-      toast.success("Analysis started! Results will appear shortly.", { id: 'analysis' });
-    } catch (error) {
-      toast.error("Failed to start analysis", { id: 'analysis' });
-      console.error(error);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
 
   if (!project) {
     return (
@@ -95,11 +71,6 @@ const ProjectDetail = () => {
     return 0;
   });
 
-  // Create analysis results from latest analysis
-  const analysisResults = latestAnalysis ? {
-    techReportMd: latestAnalysis.tech_report_md || '',
-    salesReportMd: latestAnalysis.sales_report_md || '',
-  } : null;
 
   const handlePrint = () => {
     window.print();
@@ -136,11 +107,10 @@ const ProjectDetail = () => {
         />
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="analyses">Analyses</TabsTrigger>
             <TabsTrigger value="requirements">Requirements</TabsTrigger>
-            <TabsTrigger value="tech-spec">Tech Spec</TabsTrigger>
-            <TabsTrigger value="sales-brief">Sales Brief</TabsTrigger>
           </TabsList>
 
           {/* OVERVIEW TAB */}
@@ -190,34 +160,6 @@ const ProjectDetail = () => {
               </Card>
             </div>
 
-            {/* Run Analysis Section */}
-            <Card className="shadow-soft">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  AI Analysis
-                </CardTitle>
-                <CardDescription>
-                  Generate requirements analysis from transcripts
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {latestAnalysis?.status === 'PROCESSING' || latestAnalysis?.status === 'PENDING' ? (
-                  <div className="flex items-center justify-center gap-2 py-4">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>Analysis in progress...</span>
-                  </div>
-                ) : (
-                  <Button 
-                    onClick={handleRunAnalysis} 
-                    disabled={isAnalyzing || transcripts.length === 0}
-                    className="w-full gap-2"
-                  >
-                    {isAnalyzing ? "Starting..." : "Run Analysis"}
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
 
             {/* Recent Meetings */}
             <Card className="shadow-soft">
@@ -303,19 +245,30 @@ const ProjectDetail = () => {
             </Card>
           </TabsContent>
 
+          {/* ANALYSES TAB */}
+          <TabsContent value="analyses" className="space-y-6 mt-6">
+            <Card className="shadow-soft">
+              <CardHeader>
+                <CardTitle>Analysis History</CardTitle>
+                <CardDescription>View all analyses performed on this project</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={() => window.location.href = `/project/${id}/analyses`}>
+                  View All Analyses
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* REQUIREMENTS TAB */}
           <TabsContent value="requirements" className="space-y-6 mt-6">
-            {!analysisResults ? (
+            {requirements.length === 0 ? (
               <Card className="shadow-soft">
                 <CardContent className="py-12">
                   <EmptyState
                     icon={Sparkles}
-                    title="No analysis available"
-                    description="Run an analysis from the Overview tab to see requirements"
-                    action={{
-                      label: "Go to Overview",
-                      onClick: () => setActiveTab("overview")
-                    }}
+                    title="No requirements available"
+                    description="Requirements will appear here after running an analysis"
                   />
                 </CardContent>
               </Card>
@@ -446,83 +399,6 @@ const ProjectDetail = () => {
             )}
           </TabsContent>
 
-          {/* TECH SPEC TAB */}
-          <TabsContent value="tech-spec" className="mt-6">
-            {!analysisResults || !analysisResults.techReportMd ? (
-              <Card className="shadow-soft">
-                <CardContent className="py-12">
-                  <EmptyState
-                    icon={FileText}
-                    title="No technical specification available"
-                    description="Run an analysis to generate the tech spec"
-                    action={{
-                      label: "Go to Overview",
-                      onClick: () => setActiveTab("overview")
-                    }}
-                  />
-                </CardContent>
-              </Card>
-            ) : (
-              <>
-                <Alert className="mb-6">
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    This specification is based on the latest analysis from{' '}
-                    {new Date(latestAnalysis?.created_at || '').toLocaleDateString()}
-                  </AlertDescription>
-                </Alert>
-                <Card className="shadow-elegant">
-                  <CardHeader>
-                    <CardTitle>Technical Specification</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="prose prose-sm max-w-none dark:prose-invert">
-                      {analysisResults.techReportMd}
-                    </div>
-                  </CardContent>
-                </Card>
-              </>
-            )}
-          </TabsContent>
-
-          {/* SALES BRIEF TAB */}
-          <TabsContent value="sales-brief" className="mt-6">
-            {!analysisResults || !analysisResults.salesReportMd ? (
-              <Card className="shadow-soft">
-                <CardContent className="py-12">
-                  <EmptyState
-                    icon={FileText}
-                    title="No sales brief available"
-                    description="Run an analysis to generate the sales brief"
-                    action={{
-                      label: "Go to Overview",
-                      onClick: () => setActiveTab("overview")
-                    }}
-                  />
-                </CardContent>
-              </Card>
-            ) : (
-              <>
-                <Alert className="mb-6">
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    This brief is based on the latest analysis from{' '}
-                    {new Date(latestAnalysis?.created_at || '').toLocaleDateString()}
-                  </AlertDescription>
-                </Alert>
-                <Card className="shadow-elegant">
-                  <CardHeader>
-                    <CardTitle>Sales Brief</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="prose prose-sm max-w-none dark:prose-invert">
-                      {analysisResults.salesReportMd}
-                    </div>
-                  </CardContent>
-                </Card>
-              </>
-            )}
-          </TabsContent>
         </Tabs>
 
         {/* Dialogs */}
