@@ -10,21 +10,14 @@ import ProjectDetail from "./pages/ProjectDetail";
 import ShareMock from "./pages/ShareMock";
 import AnalysisDemo from "./pages/AnalysisDemo";
 import NotFound from "./pages/NotFound";
-import { useMockStore } from "./store/useMockStore";
+import { seedDatabase } from "./lib/seedDatabase";
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  // Initialize mock store on app start
-  const mockStore = useMockStore();
-  
+  // Initialize database with seed data on app start
   useEffect(() => {
-    console.log('Mock data loaded:', {
-      projects: mockStore.projects.length,
-      meetings: mockStore.meetings.length,
-      transcripts: mockStore.transcripts.length,
-      analyses: mockStore.analyses.length,
-    });
+    seedDatabase();
   }, []);
 
   return (
