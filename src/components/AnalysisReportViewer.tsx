@@ -40,10 +40,13 @@ export const AnalysisReportViewer = ({ analysis, analysisId }: AnalysisReportVie
   const { nextSteps, toggleNextStep } = useMockStore();
   const [activeTab, setActiveTab] = useState("tech");
 
+  // Get analysis name from the database
+  const analysisName = (analysis as any).name || 'Analysis Report';
+
   return (
     <Card className="shadow-elegant border-2">
       <CardHeader className="border-b bg-secondary/30">
-        <CardTitle className="text-2xl">Analysis Reports</CardTitle>
+        <CardTitle className="text-2xl">{analysisName}</CardTitle>
       </CardHeader>
       <CardContent className="pt-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>

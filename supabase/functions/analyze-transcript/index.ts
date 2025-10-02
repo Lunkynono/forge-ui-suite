@@ -216,7 +216,15 @@ Deno.serve(async (req) => {
       // 4. Parse JSON response
       const analysisResult = parseGraniteResponse(generatedText);
 
-      // 5. Update job with results
+      // 5. Validate that both reports exist
+      if (!analysisResult.techReportMd || analysisResult.techReportMd.trim().length < 50) {
+        throw new Error('Technical report is missing or too short');
+      }
+      if (!analysisResult.salesReportMd || analysisResult.salesReportMd.trim().length < 50) {
+        throw new Error('Sales report is missing or too short');
+      }
+
+      // 6. Update job with results
       await supabase
         .from('analysis_jobs')
         .update({
@@ -228,13 +236,13 @@ Deno.serve(async (req) => {
         })
         .eq('id', jobId);
 
-      // 6. Delete old requirements for this project
+      // 7. Delete old requirements for this project
       await supabase
         .from('requirements')
         .delete()
         .eq('project_id', projectId);
 
-      // 7. Insert new requirements
+      // 8. Insert new requirements
       const requirements = [
         ...(analysisResult.needs || []).map((need: any) => ({
           project_id: projectId,
@@ -262,7 +270,7 @@ Deno.serve(async (req) => {
         await supabase.from('requirements').insert(requirements);
       }
 
-      // 8. Count stats
+      // 9. Count stats
       const needsCount = analysisResult.needs?.length || 0;
       const wantsCount = analysisResult.wants?.length || 0;
       const p0Count = requirements.filter((r: any) => r.priority === 'P0').length;

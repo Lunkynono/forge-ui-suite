@@ -96,7 +96,7 @@ const Analyses = () => {
           </Button>
 
           <PageHeader
-            title={`Analysis from ${new Date(selectedAnalysis.created_at).toLocaleDateString()}`}
+            title={selectedAnalysis.name || `Analysis from ${new Date(selectedAnalysis.created_at).toLocaleDateString()}`}
             description={`Provider: ${selectedAnalysis.provider} • Status: ${selectedAnalysis.status}`}
           />
 
@@ -209,7 +209,7 @@ const Analyses = () => {
                     <div className="flex items-start justify-between">
                       <div>
                         <CardTitle className="text-lg">
-                          Analysis {new Date(analysis.created_at).toLocaleString()}
+                          {analysis.name || `Analysis ${new Date(analysis.created_at).toLocaleString()}`}
                         </CardTitle>
                         <CardDescription className="mt-1">
                           Provider: {analysis.provider}
