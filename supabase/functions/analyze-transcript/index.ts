@@ -16,34 +16,68 @@ const REPLICATE_API_TOKEN = Deno.env.get('REPLICATE_API_TOKEN');
 function buildGranitePrompt(transcriptText: string, language: string): string {
   const isSpanish = language.toLowerCase().startsWith('es');
   
-  return `You are an expert business analyst. Analyze the following customer meeting transcript and extract structured requirements.
+  const lang = isSpanish ? 'es' : 'en';
+  
+  const instructions = {
+    es: `Eres un analista de negocios experto. Analiza la siguiente transcripción de una reunión con cliente y extrae requisitos estructurados.
 
-INSTRUCTIONS:
-1. Identify NEEDS (must-haves, compliance, constraints, legal requirements) vs WANTS (preferences, nice-to-haves)
-2. Assign priorities:
-   - P0: compliance, security, SLA, latency, legal, regulatory requirements
+INSTRUCCIONES CRÍTICAS:
+1. Lee TODA la transcripción cuidadosamente
+2. Identifica NECESIDADES (obligatorios, cumplimiento, restricciones, requisitos legales) vs DESEOS (preferencias, opcionales)
+3. Asigna prioridades según criticidad:
+   - P0: cumplimiento normativo, seguridad, SLA críticos, latencia, requisitos legales/regulatorios
+   - P1: autenticación, rendimiento, capacidad offline, escalabilidad
+   - P2-P3: preferencias de UI, temas, chatbots, características cosméticas
+4. Para cada requisito, captura información de origen cuando esté disponible (quién lo dijo, cuándo, cita exacta)
+5. IMPORTANTE: Genera contenido REAL basado en la transcripción. NO uses placeholders como [Puntos], [Decisiones], [Riesgos], etc.
+6. Si la transcripción no contiene información suficiente, genera al menos un análisis básico del contenido disponible
+
+TRANSCRIPCIÓN:
+${transcriptText}
+
+Retorna SOLO JSON válido (sin markdown, sin texto adicional) con esta estructura exacta:
+{
+  "customer": { "name": "nombre extraído de la transcripción o 'Cliente'", "industry": "industria identificada o 'General'" },
+  "needs": [{ "id": "N-001", "text": "descripción específica del requisito necesario", "priority": "P0", "source": { "speaker": "nombre del hablante si está disponible", "timestamp": "marca de tiempo si está disponible", "quote": "cita textual si está disponible" } }],
+  "wants": [{ "id": "W-001", "text": "descripción específica del requisito deseado", "priority": "P2", "source": { "speaker": null, "timestamp": null, "quote": null } }],
+  "risks": ["riesgo identificado 1", "riesgo identificado 2"],
+  "assumptions": ["suposición identificada 1", "suposición identificada 2"],
+  "open_questions": ["pregunta pendiente 1", "pregunta pendiente 2"],
+  "acceptance_criteria": ["criterio de aceptación 1", "criterio de aceptación 2"],
+  "techReportMd": "# Especificación Técnica\\n\\n## Resumen Ejecutivo\\nDescripción específica de los requisitos P0/P1 identificados en la reunión...\\n\\n## Arquitectura Propuesta\\n### Componentes Principales\\n- Componente específico 1: descripción basada en la reunión\\n- Componente específico 2: descripción basada en la reunión\\n\\n### Stack Tecnológico\\nStack recomendado basado en requisitos discutidos...\\n\\n## Integraciones Requeridas\\n- Integración 1: detalles específicos\\n- Integración 2: detalles específicos\\n\\n## Criterios de Aceptación y SLOs\\n- Criterio 1 con métricas específicas\\n- Criterio 2 con métricas específicas\\n\\n## Riesgos y Mitigaciones\\n- Riesgo identificado: estrategia de mitigación\\n\\n## Supuestos Abiertos\\n- Suposición 1: necesita validación\\n- Suposición 2: necesita validación",
+  "salesReportMd": "# Brief Comercial\\n\\n## Puntos Clave del Cliente\\nResumen de los puntos principales discutidos durante la reunión...\\n\\n## Decisiones Pendientes\\n- Decisión 1: contexto y stakeholder responsable\\n- Decisión 2: contexto y stakeholder responsable\\n\\n## Objeciones Identificadas\\n- Objeción 1: contexto y respuesta propuesta\\n- Objeción 2: contexto y respuesta propuesta\\n\\n## Próximos Pasos\\n- [ ] Acción específica 1 con responsable y fecha\\n- [ ] Acción específica 2 con responsable y fecha\\n- [ ] Acción específica 3 con responsable y fecha\\n\\n## Agenda Sugerida para Siguiente Reunión\\n- Tema 1: basado en conversación\\n- Tema 2: basado en conversación\\n- Tema 3: basado en conversación"
+}`,
+    en: `You are an expert business analyst. Analyze the following customer meeting transcript and extract structured requirements.
+
+CRITICAL INSTRUCTIONS:
+1. Read the ENTIRE transcript carefully
+2. Identify NEEDS (must-haves, compliance, constraints, legal requirements) vs WANTS (preferences, nice-to-haves)
+3. Assign priorities based on criticality:
+   - P0: regulatory compliance, security, critical SLAs, latency, legal/regulatory requirements
    - P1: authentication, performance, offline capability, scalability
    - P2-P3: UI preferences, themes, chatbots, cosmetic features
-3. For each requirement, capture source information if available (speaker, timestamp, quote)
-4. Extract customer information, risks, assumptions, questions, and acceptance criteria
+4. For each requirement, capture source information when available (who said it, when, exact quote)
+5. IMPORTANT: Generate REAL content based on the transcript. DO NOT use placeholders like [Points], [Decisions], [Risks], etc.
+6. If the transcript lacks sufficient information, at least generate a basic analysis of the available content
 
 TRANSCRIPT:
 ${transcriptText}
 
-Return ONLY valid JSON (no markdown, no prose) with this exact structure:
+Return ONLY valid JSON (no markdown, no additional text) with this exact structure:
 {
-  "customer": { "name": "string", "industry": "string" },
-  "needs": [{ "id": "N-001", "text": "string", "priority": "P0|P1|P2|P3", "source": { "speaker": "string?", "timestamp": "string?", "quote": "string?" } }],
-  "wants": [{ "id": "W-001", "text": "string", "priority": "P0|P1|P2|P3", "source": { "speaker": "string?", "timestamp": "string?", "quote": "string?" } }],
-  "risks": ["string"],
-  "assumptions": ["string"],
-  "open_questions": ["string"],
-  "acceptance_criteria": ["string"],
-  "techReportMd": "# Technical Specification\\n\\n## Executive Summary\\n[P0/P1 requirements]\\n\\n## Proposed Architecture\\n- Component 1\\n- Component 2\\n\\n## Integrations\\n- SSO/OIDC\\n- Encryption\\n- Logging\\n\\n## Acceptance Criteria & SLOs\\n[Criteria]\\n\\n## Risks & Mitigations\\n[Risks]\\n\\n## Open Assumptions\\n[Assumptions]",
-  "salesReportMd": "# Sales Brief\\n\\n## Key Customer Points\\n[Points]\\n\\n## Pending Decisions\\n[Decisions]\\n\\n## Objections\\n[Objections]\\n\\n## Next Steps\\n- [ ] Step 1\\n- [ ] Step 2\\n- [ ] Step 3\\n- [ ] Step 4\\n- [ ] Step 5\\n\\n## Suggested Agenda\\n- Topic 1\\n- Topic 2\\n- Topic 3\\n- Topic 4\\n- Topic 5"
-}
-
-${isSpanish ? 'Generate all reports in Spanish.' : 'Generate all reports in English.'}`;
+  "customer": { "name": "name extracted from transcript or 'Customer'", "industry": "identified industry or 'General'" },
+  "needs": [{ "id": "N-001", "text": "specific description of required need", "priority": "P0", "source": { "speaker": "speaker name if available", "timestamp": "timestamp if available", "quote": "exact quote if available" } }],
+  "wants": [{ "id": "W-001", "text": "specific description of desired want", "priority": "P2", "source": { "speaker": null, "timestamp": null, "quote": null } }],
+  "risks": ["identified risk 1", "identified risk 2"],
+  "assumptions": ["identified assumption 1", "identified assumption 2"],
+  "open_questions": ["pending question 1", "pending question 2"],
+  "acceptance_criteria": ["acceptance criterion 1", "acceptance criterion 2"],
+  "techReportMd": "# Technical Specification\\n\\n## Executive Summary\\nSpecific description of P0/P1 requirements identified in the meeting...\\n\\n## Proposed Architecture\\n### Main Components\\n- Specific component 1: description based on meeting\\n- Specific component 2: description based on meeting\\n\\n### Technology Stack\\nRecommended stack based on discussed requirements...\\n\\n## Required Integrations\\n- Integration 1: specific details\\n- Integration 2: specific details\\n\\n## Acceptance Criteria & SLOs\\n- Criterion 1 with specific metrics\\n- Criterion 2 with specific metrics\\n\\n## Risks & Mitigations\\n- Identified risk: mitigation strategy\\n\\n## Open Assumptions\\n- Assumption 1: needs validation\\n- Assumption 2: needs validation",
+  "salesReportMd": "# Sales Brief\\n\\n## Key Customer Points\\nSummary of main points discussed during the meeting...\\n\\n## Pending Decisions\\n- Decision 1: context and responsible stakeholder\\n- Decision 2: context and responsible stakeholder\\n\\n## Identified Objections\\n- Objection 1: context and proposed response\\n- Objection 2: context and proposed response\\n\\n## Next Steps\\n- [ ] Specific action 1 with responsible party and date\\n- [ ] Specific action 2 with responsible party and date\\n- [ ] Specific action 3 with responsible party and date\\n\\n## Suggested Agenda for Next Meeting\\n- Topic 1: based on conversation\\n- Topic 2: based on conversation\\n- Topic 3: based on conversation"
+}`
+  };
+  
+  return instructions[lang];
 }
 
 async function callGranite(prompt: string): Promise<any> {
@@ -63,7 +97,7 @@ async function callGranite(prompt: string): Promise<any> {
       input: {
         prompt: prompt,
         max_tokens: 4096,
-        temperature: 0.7,
+        temperature: 0.3, // Lower temperature for more focused output
       }
     }
   );
@@ -88,7 +122,34 @@ function parseGraniteResponse(responseText: string): any {
   }
   
   try {
-    return JSON.parse(jsonText);
+    const parsed = JSON.parse(jsonText);
+    
+    // Validate that we don't have placeholder content
+    const hasPlaceholders = (text: string) => {
+      const placeholderPatterns = [
+        /\[Points?\]/i,
+        /\[Decisions?\]/i,
+        /\[Risks?\]/i,
+        /\[Objections?\]/i,
+        /\[Criteria\]/i,
+        /\[Assumptions?\]/i,
+        /Component \d+$/,
+        /Step \d+$/,
+        /Topic \d+$/,
+        /- \[/,
+      ];
+      return placeholderPatterns.some(pattern => pattern.test(text));
+    };
+    
+    // Check tech and sales reports for placeholders
+    if (parsed.techReportMd && hasPlaceholders(parsed.techReportMd)) {
+      console.warn('Detected placeholders in techReportMd, but accepting response');
+    }
+    if (parsed.salesReportMd && hasPlaceholders(parsed.salesReportMd)) {
+      console.warn('Detected placeholders in salesReportMd, but accepting response');
+    }
+    
+    return parsed;
   } catch (error: any) {
     console.error('Failed to parse JSON:', error);
     throw new Error(`Invalid JSON in Granite response: ${error.message}`);
