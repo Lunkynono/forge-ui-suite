@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Ingest from "./pages/Ingest";
 import ProjectDetail from "./pages/ProjectDetail";
 import ShareMock from "./pages/ShareMock";
+import AnalysisDemo from "./pages/AnalysisDemo";
 import NotFound from "./pages/NotFound";
 import { useMockStore } from "./store/useMockStore";
 
@@ -35,6 +36,7 @@ const App = () => {
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/ingest" element={<Ingest />} />
+          <Route path="/analysis-demo" element={<AnalysisDemo />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/share/mock/:slug" element={<ShareMock />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

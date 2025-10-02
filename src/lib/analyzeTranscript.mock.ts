@@ -225,57 +225,135 @@ function generateTechReport(
   const p1Needs = needs.filter(n => n.priority === 'P1');
   const p2p3Needs = needs.filter(n => n.priority === 'P2' || n.priority === 'P3');
   
-  return `# Technical Requirements Report: ${projectName}
+  return `# Technical Specification: ${projectName}
 
 ## Executive Summary
-This document outlines the technical requirements, priorities, and risks identified from the transcript analysis.
 
-## Critical Requirements (P0)
+### Critical Requirements (P0)
 ${p0Needs.length > 0 ? p0Needs.map((req, i) => 
   `${i + 1}. **${req.category}**: ${req.text}${req.speaker ? ` _(${req.speaker})_` : ''}`
 ).join('\n') : '_No P0 requirements identified_'}
 
-## High Priority Requirements (P1)
+### High Priority Requirements (P1)
 ${p1Needs.length > 0 ? p1Needs.map((req, i) => 
   `${i + 1}. **${req.category}**: ${req.text}${req.speaker ? ` _(${req.speaker})_` : ''}`
 ).join('\n') : '_No P1 requirements identified_'}
 
-## Medium/Low Priority Requirements (P2-P3)
-${p2p3Needs.length > 0 ? p2p3Needs.map((req, i) => 
-  `${i + 1}. [${req.priority}] **${req.category}**: ${req.text}`
-).join('\n') : '_No P2-P3 requirements identified_'}
+---
 
-## Nice-to-Have Features
-${wants.length > 0 ? wants.map((req, i) => 
-  `${i + 1}. [${req.priority}] ${req.text}${req.speaker ? ` _(${req.speaker})_` : ''}`
-).join('\n') : '_No wants identified_'}
+## Proposed Architecture
 
-## Technical Risks
-${risks.length > 0 ? risks.map((risk, i) => 
-  `${i + 1}. ${risk}`
-).join('\n') : '_No risks identified_'}
+### System Components
+- **Frontend Layer**: React-based SPA with TypeScript
+- **API Gateway**: RESTful API with rate limiting and caching
+- **Business Logic**: Microservices architecture for scalability
+- **Data Layer**: PostgreSQL with Redis caching layer
+- **Storage**: S3-compatible object storage for files
 
-## Assumptions
-${assumptions.length > 0 ? assumptions.map((assumption, i) => 
+### Technology Stack
+- Frontend: React 18, TypeScript, TailwindCSS
+- Backend: Node.js, Express/Fastify
+- Database: PostgreSQL 15+, Redis 7+
+- Infrastructure: Docker, Kubernetes, AWS/GCP
+
+---
+
+## Integrations
+
+### Authentication & Authorization
+- **SSO Integration**: SAML 2.0 and OAuth 2.0/OIDC support
+- **Identity Providers**: Support for Okta, Azure AD, Google Workspace
+- **MFA**: TOTP and WebAuthn support
+- **Session Management**: JWT with refresh token rotation
+
+### Security & Compliance
+- **Encryption at Rest**: AES-256 for database and storage
+- **Encryption in Transit**: TLS 1.3 for all API communications
+- **Key Management**: AWS KMS or HashiCorp Vault integration
+- **Audit Logging**: Comprehensive audit trail for compliance
+- **Data Residency**: Configurable regional data storage
+
+### Logging & Monitoring
+- **Application Logging**: Structured JSON logs via Winston/Pino
+- **Infrastructure Monitoring**: Prometheus + Grafana
+- **Error Tracking**: Sentry or equivalent APM
+- **Performance Monitoring**: New Relic or Datadog
+- **Log Aggregation**: ELK Stack or CloudWatch
+
+---
+
+## Acceptance Criteria & SLOs
+
+### Functional Acceptance Criteria
+${p0Needs.slice(0, 5).map((need, i) => 
+  `${i + 1}. **${need.category}**: System must ${need.text.toLowerCase()}`
+).join('\n') || '_To be defined_'}
+
+### Service Level Objectives (SLOs)
+- **Availability**: 99.9% uptime (measured monthly)
+- **Latency**: 
+  - P50: < 200ms for API calls
+  - P95: < 500ms for API calls
+  - P99: < 1000ms for API calls
+- **Error Rate**: < 0.1% for all requests
+- **Data Durability**: 99.999999999% (11 nines)
+- **Recovery Time Objective (RTO)**: < 4 hours
+- **Recovery Point Objective (RPO)**: < 15 minutes
+
+---
+
+## Risks & Mitigations
+
+### Technical Risks
+${risks.slice(0, 5).map((risk, i) => 
+  `${i + 1}. **Risk**: ${risk}\n   - _Mitigation_: To be assessed during technical design phase`
+).join('\n') || '_No specific risks identified_'}
+
+### Additional Considerations
+- **Scalability**: Load testing required before production launch
+- **Data Migration**: Plan needed if replacing existing system
+- **Third-party Dependencies**: Risk of API changes or service outages
+- **Compliance**: Regular audits required for SOC2/GDPR compliance
+
+---
+
+## Open Assumptions
+
+${assumptions.map((assumption, i) => 
   `${i + 1}. ${assumption}`
-).join('\n') : '_No assumptions identified_'}
+).join('\n') || '_No assumptions documented_'}
+
+### Questions for Stakeholders
+- What is the expected user load at launch and in 12 months?
+- Are there specific compliance requirements (GDPR, HIPAA, SOC2)?
+- What is the budget for infrastructure and third-party services?
+- What is the target go-live date?
+
+---
 
 ## Implementation Roadmap
 
-### Phase 1: Critical Features (P0)
-- Focus on security, compliance, and core functionality
-- Target: Weeks 1-4
+### Phase 1: Foundation (Weeks 1-4)
+- Set up infrastructure and CI/CD pipelines
+- Implement authentication and authorization
+- Build core API framework
+- ${p0Needs.length > 0 ? 'Implement P0 requirements' : 'Core functionality'}
 
-### Phase 2: High Priority (P1)
-- Authentication, performance optimization
-- Target: Weeks 5-8
+### Phase 2: Core Features (Weeks 5-8)
+- ${p1Needs.length > 0 ? 'Implement P1 requirements' : 'Primary features'}
+- Integration with third-party services
+- Performance optimization
+- Security hardening
 
-### Phase 3: Enhancement (P2-P3)
-- UI improvements, additional features
-- Target: Weeks 9-12
+### Phase 3: Enhancement (Weeks 9-12)
+- ${p2p3Needs.length > 0 ? 'Implement P2-P3 requirements' : 'Additional features'}
+- UI/UX refinements
+- Comprehensive testing
+- Documentation and training materials
 
 ---
-_Report generated on ${new Date().toISOString().split('T')[0]}_
+
+_Technical Specification v1.0 — Generated ${new Date().toISOString().split('T')[0]}_
 `;
 }
 
@@ -288,61 +366,128 @@ function generateSalesReport(
   wants: RequirementItem[],
   openQuestions: string[]
 ): string {
-  const categorizedNeeds = needs.reduce((acc, need) => {
-    const cat = need.category || 'Other';
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(need);
-    return acc;
-  }, {} as Record<string, RequirementItem[]>);
+  const p0Needs = needs.filter(n => n.priority === 'P0');
+  const p1Needs = needs.filter(n => n.priority === 'P1');
 
-  return `# Business Requirements Report: ${projectName}
+  return `# Sales Brief: ${projectName}
 
-## Overview
-This report summarizes the key business requirements and opportunities identified during client discussions.
+## Key Points
 
-## Customer Needs by Category
-
-${Object.entries(categorizedNeeds).map(([category, items]) => `
-### ${category}
-${items.map((item, i) => 
-  `${i + 1}. [${item.priority}] ${item.text}${item.speaker ? ` — _${item.speaker}_` : ''}`
-).join('\n')}
-`).join('\n')}
-
-## Value Propositions
-
-### Must-Have Features (Critical for Deal)
-${needs.filter(n => n.priority === 'P0').map((n, i) => 
-  `${i + 1}. ${n.text}`
+### Must-Have Requirements (Deal Breakers)
+${p0Needs.slice(0, 5).map((n, i) => 
+  `${i + 1}. **${n.category}**: ${n.text}${n.speaker ? ` — _${n.speaker}_` : ''}`
 ).join('\n') || '_None identified_'}
 
 ### High-Impact Features (Competitive Advantage)
-${needs.filter(n => n.priority === 'P1').map((n, i) => 
-  `${i + 1}. ${n.text}`
+${p1Needs.slice(0, 5).map((n, i) => 
+  `${i + 1}. **${n.category}**: ${n.text}${n.speaker ? ` — _${n.speaker}_` : ''}`
 ).join('\n') || '_None identified_'}
 
-### Enhancement Opportunities
-${wants.slice(0, 5).map((w, i) => 
-  `${i + 1}. ${w.text} — _Upsell opportunity_`
+### Upsell Opportunities
+${wants.slice(0, 4).map((w, i) => 
+  `${i + 1}. ${w.text} — _Additional revenue potential_`
 ).join('\n') || '_None identified_'}
-
-## Open Questions for Customer
-${openQuestions.slice(0, 8).map((q, i) => 
-  `${i + 1}. ${q}`
-).join('\n') || '_No open questions_'}
-
-## Next Steps
-1. Schedule follow-up meeting to address open questions
-2. Prepare technical feasibility assessment for P0 requirements
-3. Draft proposal with phased approach
-4. Identify potential upsell opportunities from "wants" list
-
-## Deal Risk Assessment
-- **High Priority Count**: ${needs.filter(n => n.priority === 'P0' || n.priority === 'P1').length} critical requirements
-- **Complexity**: ${needs.length > 10 ? 'High' : needs.length > 5 ? 'Medium' : 'Low'}
-- **Opportunity Size**: ${wants.length > 5 ? 'Large expansion potential' : 'Standard scope'}
 
 ---
-_Report generated on ${new Date().toISOString().split('T')[0]}_
+
+## Pending Decisions
+
+### Client Decisions Required
+${openQuestions.slice(0, 5).map((q, i) => 
+  `${i + 1}. ${q}`
+).join('\n') || '_No pending decisions_'}
+
+### Internal Decisions Required
+- Pricing structure and discount approval
+- Resource allocation and timeline commitment
+- Technical feasibility assessment completion
+- Legal review of custom contract terms
+
+---
+
+## Potential Objections
+
+### Budget Concerns
+- **Objection**: "This seems expensive compared to alternatives"
+- **Response**: Highlight TCO reduction through automation and efficiency gains
+- **Proof Points**: ROI calculator, case studies showing 3-6 month payback
+
+### Timeline Concerns
+- **Objection**: "We need this faster than your proposed timeline"
+- **Response**: Phased approach with P0 features in first release
+- **Proof Points**: Reference similar projects delivered on accelerated schedule
+
+### Technical Complexity
+- **Objection**: "Our team may struggle to adopt this"
+- **Response**: Comprehensive training and change management support included
+- **Proof Points**: Customer success program, 24/7 support, dedicated onboarding
+
+### Competitive Alternatives
+- **Objection**: "Why not use [Competitor X]?"
+- **Response**: Unique differentiators in security, compliance, and customization
+- **Proof Points**: Feature comparison matrix, customer testimonials
+
+---
+
+## Next Steps
+
+### Immediate Actions (This Week)
+- [ ] Schedule technical deep-dive with engineering team
+- [ ] Provide detailed pricing proposal and SOW
+- [ ] Share case studies from similar implementations
+- [ ] Set up demo environment with sample data
+
+### Follow-up Actions (Next 2 Weeks)
+- [ ] Conduct security and compliance review
+- [ ] Finalize technical architecture and integrations plan
+- [ ] Legal review of contract terms and SLA
+- [ ] Executive sponsor alignment meeting
+
+---
+
+## Suggested Agenda for Next Meeting
+
+### Meeting Objective
+Align on technical requirements and move toward final proposal
+
+### Proposed Agenda (60 minutes)
+
+1. **Review Technical Specification** (15 min)
+   - Walk through proposed architecture
+   - Discuss integration points and dependencies
+   - Address technical concerns
+
+2. **Clarify Open Questions** (15 min)
+   - Review pending decisions list
+   - Gather missing requirements
+   - Validate assumptions
+
+3. **Demo Core Features** (15 min)
+   - Show proof of concept
+   - Demonstrate P0 functionality
+   - Preview roadmap features
+
+4. **Discuss Timeline & Resources** (10 min)
+   - Review implementation phases
+   - Identify client-side resource needs
+   - Confirm key milestones
+
+5. **Next Steps & Close** (5 min)
+   - Assign action items
+   - Schedule follow-up meetings
+   - Confirm decision timeline
+
+---
+
+## Deal Assessment
+
+- **Stage**: ${p0Needs.length > 3 ? 'Qualified - High Priority' : 'Discovery'}
+- **Decision Timeline**: ${openQuestions.length < 3 ? '2-4 weeks' : '4-8 weeks (pending clarity)'}
+- **Win Probability**: ${p0Needs.length > 0 && openQuestions.length < 5 ? 'High (70-80%)' : 'Medium (40-60%)'}
+- **Key Stakeholders**: ${p0Needs.map(n => n.speaker).filter((s, i, arr) => s && arr.indexOf(s) === i).join(', ') || 'To be identified'}
+
+---
+
+_Sales Brief v1.0 — Generated ${new Date().toISOString().split('T')[0]}_
 `;
 }
