@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import Replicate from "https://esm.sh/replicate@0.25.2"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,49 +10,8 @@ interface TranscriptAnalysisRequest {
   transcriptId: string;
 }
 
-// IBM watsonx.ai credentials (to be provided by user)
-const WX_API_KEY = Deno.env.get('WX_API_KEY');
-const WX_REGION = Deno.env.get('WX_REGION') || 'us-south';
-const WX_PROJECT_ID = Deno.env.get('WX_PROJECT_ID');
-const WX_MODEL_ID = Deno.env.get('WX_MODEL_ID') || 'ibm/granite-3-8b-instruct';
-const WX_VERSION = Deno.env.get('WX_VERSION') || '2025-02-11';
-
-const WX_BASE_URL = `https://${WX_REGION}.ml.cloud.ibm.com`;
-
-// IAM token cache
-let cachedToken: { token: string; expiresAt: number } | null = null;
-
-async function getIAMToken(): Promise<string> {
-  // Check if we have a valid cached token
-  if (cachedToken && Date.now() < cachedToken.expiresAt - 60000) {
-    console.log('Using cached IAM token');
-    return cachedToken.token;
-  }
-
-  console.log('Fetching new IAM token');
-  const response = await fetch('https://iam.cloud.ibm.com/identity/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: `grant_type=urn:ibm:params:oauth:grant-type:apikey&apikey=${WX_API_KEY}`,
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to get IAM token: ${response.status} - ${error}`);
-  }
-
-  const data = await response.json();
-  const expiresIn = data.expires_in || 3600;
-  
-  cachedToken = {
-    token: data.access_token,
-    expiresAt: Date.now() + (expiresIn * 1000),
-  };
-
-  return cachedToken.token;
-}
+// Replicate configuration
+const REPLICATE_API_TOKEN = Deno.env.get('REPLICATE_API_TOKEN');
 
 function buildGranitePrompt(transcriptText: string, language: string): string {
   const isSpanish = language.toLowerCase().startsWith('es');
@@ -87,42 +47,35 @@ ${isSpanish ? 'Generate all reports in Spanish.' : 'Generate all reports in Engl
 }
 
 async function callGranite(prompt: string): Promise<any> {
-  if (!WX_API_KEY || !WX_PROJECT_ID) {
-    throw new Error('IBM watsonx.ai credentials not configured. Please provide WX_API_KEY and WX_PROJECT_ID.');
+  if (!REPLICATE_API_TOKEN) {
+    throw new Error('REPLICATE_API_TOKEN is not configured');
   }
 
-  const token = await getIAMToken();
-  const url = `${WX_BASE_URL}/ml/v1/text/generation?version=${WX_VERSION}`;
-
-  console.log(`Calling Granite at ${url}`);
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify({
-      input: prompt,
-      parameters: {
-        max_new_tokens: 3000,
-        temperature: 0.2,
-      },
-      model_id: WX_MODEL_ID,
-      project_id: WX_PROJECT_ID,
-    }),
+  console.log('Calling IBM Granite on Replicate...');
+  
+  const replicate = new Replicate({
+    auth: REPLICATE_API_TOKEN,
   });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Granite API error: ${response.status} - ${error}`);
-  }
+  const output = await replicate.run(
+    "ibm-granite/granite-3.3-8b-instruct",
+    {
+      input: {
+        prompt: prompt,
+        max_tokens: 4096,
+        temperature: 0.7,
+      }
+    }
+  );
 
-  const data = await response.json();
-  console.log('Granite response received');
+  console.log('Replicate API call successful');
   
-  return data;
+  // Replicate returns an array of strings, join them
+  if (Array.isArray(output)) {
+    return { generated_text: output.join('') };
+  }
+  
+  return { generated_text: String(output) };
 }
 
 function parseGraniteResponse(responseText: string): any {
@@ -191,7 +144,7 @@ Deno.serve(async (req) => {
       const graniteResponse = await callGranite(prompt);
       
       // Extract generated text from Granite response
-      const generatedText = graniteResponse.results?.[0]?.generated_text || graniteResponse.generated_text;
+      const generatedText = graniteResponse.generated_text;
       
       if (!generatedText) {
         throw new Error('No generated text in Granite response');

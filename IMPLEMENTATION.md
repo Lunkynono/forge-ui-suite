@@ -1,10 +1,10 @@
-# Lovable Cloud + IBM watsonx.ai Granite Implementation
+# Lovable Cloud + IBM Granite on Replicate Implementation
 
 ## Overview
 
 This project has been migrated from a mock-based architecture to a real production-ready backend using:
 - **Lovable Cloud** (Supabase/PostgreSQL) for data persistence
-- **IBM watsonx.ai Granite** for AI-powered requirements analysis
+- **IBM Granite 3.3-8B-Instruct** (via Replicate) for AI-powered requirements analysis
 - **Deno Edge Functions** for serverless backend logic
 
 ## Architecture
@@ -29,29 +29,24 @@ share_tokens (id, project_id, token, expires_at, created_at)
 ### Edge Functions
 
 #### 1. `analyze-transcript`
-**Purpose**: Analyzes transcripts using IBM watsonx.ai Granite to extract structured requirements
+**Purpose**: Analyzes transcripts using IBM Granite 3.3-8B-Instruct on Replicate to extract structured requirements
 
-**IBM watsonx.ai Integration**:
-- **Endpoint**: `https://{WX_REGION}.ml.cloud.ibm.com/ml/v1/text/generation?version={WX_VERSION}`
-- **Authentication**: IAM Bearer token (auto-refreshed, 1-hour cache)
-- **Model**: Granite 3.x instruct model (configurable via `WX_MODEL_ID`)
-- **Parameters**: `max_new_tokens: 3000`, `temperature: 0.2`
+**Replicate Integration**:
+- **Model**: `ibm-granite/granite-3.3-8b-instruct`
+- **Authentication**: Replicate API token
+- **Parameters**: `max_tokens: 4096`, `temperature: 0.7`
+- **Execution**: Synchronous via `replicate.run()` - no performance penalty
 
 **Required Secrets** (configure in Lovable Cloud):
-- `WX_API_KEY` - IBM Cloud IAM API key
-- `WX_REGION` - Region (e.g., `us-south`, `eu-de`)  
-- `WX_PROJECT_ID` - watsonx.ai project UUID
-- `WX_MODEL_ID` - Granite model ID (default: `ibm/granite-3-8b-instruct`)
-- `WX_VERSION` - API version date (default: `2025-02-11`)
+- `REPLICATE_API_TOKEN` - Your Replicate API token
 
 **Flow**:
 1. Load transcript from database
-2. Acquire IAM token from `https://iam.cloud.ibm.com/identity/token`
-3. Build Granite prompt (see Prompt Engineering below)
-4. Call Granite Text Generation API
-5. Parse JSON response and validate schema
-6. Store results in `analysis_jobs` table
-7. Upsert requirements into `requirements` table
+2. Build Granite prompt (see Prompt Engineering below)
+3. Call Replicate API with IBM Granite model
+4. Parse JSON response and validate schema
+5. Store results in `analysis_jobs` table
+6. Upsert requirements into `requirements` table
 
 **Prompt Engineering**:
 The prompt instructs Granite to:
@@ -89,65 +84,39 @@ The prompt instructs Granite to:
 
 ## Configuration Steps
 
-### 1. Add IBM watsonx.ai Credentials
+### 1. Get Replicate API Token
 
-You need to configure 5 secrets in Lovable Cloud:
+You need to configure 1 secret in Lovable Cloud:
 
 ```bash
-WX_API_KEY         # IBM Cloud IAM API key
-WX_REGION          # e.g., "us-south" or "eu-de"
-WX_PROJECT_ID      # watsonx.ai project UUID
-WX_MODEL_ID        # e.g., "ibm/granite-3-8b-instruct"
-WX_VERSION         # e.g., "2025-02-11"
+REPLICATE_API_TOKEN    # Your Replicate API token
 ```
 
-#### How to Get These Values:
+#### How to Get Your Token:
 
-**WX_API_KEY**:
-1. Go to [IBM Cloud](https://cloud.ibm.com/)
-2. Navigate to Manage > Access (IAM) > API keys
-3. Create a new API key
-4. Copy the key (you won't be able to see it again)
+**REPLICATE_API_TOKEN**:
+1. Go to [Replicate](https://replicate.com/)
+2. Sign in or create an account
+3. Navigate to your [API tokens page](https://replicate.com/account/api-tokens)
+4. Copy your API token
 
-**WX_REGION**:
-- Your watsonx.ai deployment region (e.g., `us-south`, `eu-de`, `eu-gb`)
+### 2. Configure Secret in Lovable
 
-**WX_PROJECT_ID**:
-1. Go to [watsonx.ai](https://dataplatform.cloud.ibm.com/)
-2. Open your project
-3. Go to Manage > General
-4. Copy the Project ID (UUID format)
+The `REPLICATE_API_TOKEN` secret has already been requested above. After you provide it, the integration will be fully configured.
 
-**WX_MODEL_ID**:
-1. Check [IBM's supported models](https://dataplatform.cloud.ibm.com/docs/content/wsj/analyze-data/fm-models.html)
-2. Use Granite 3.2 if available: `ibm/granite-3-8b-instruct`
-3. Or check your account for available Granite models
-
-**WX_VERSION**:
-- Use `2025-02-11` or check [IBM's API versioning docs](https://cloud.ibm.com/apidocs/watsonx-ai#versioning)
-
-### 2. Configure Secrets in Lovable
-
-Once you have your IBM credentials, you'll need to add them as secrets.
-
-I've already requested the `WX_API_KEY` secret above. After you provide it, I'll need you to add the remaining secrets:
-
-- `WX_REGION`
-- `WX_PROJECT_ID`
-- `WX_MODEL_ID`
-- `WX_VERSION`
+The edge function automatically uses the `ibm-granite/granite-3.3-8b-instruct` model.
 
 ### 3. Test the Integration
 
-After adding all secrets:
+After adding the secret:
 
 1. Navigate to a project
 2. Go to the Overview tab
 3. Click "Run Analysis"
 4. The system will:
    - Call the `analyze-transcript` edge function
-   - Which will authenticate with IBM Cloud
-   - Call Granite with the transcript
+   - Which will authenticate with Replicate
+   - Call IBM Granite model with the transcript
    - Parse and store the results
    - Extract requirements
 
@@ -174,14 +143,11 @@ They are configured as **public** (no JWT required) for MVP testing.
 
 ## Troubleshooting
 
-### IAM Token Issues
-- Tokens expire after ~1 hour and are auto-refreshed
-- Check edge function logs for "Fetching new IAM token"
-
-### Granite API Errors
-- **401 Unauthorized**: Check `WX_API_KEY` is correct
-- **403 Forbidden**: Verify `WX_PROJECT_ID` has access to the model
-- **404 Not Found**: Check `WX_MODEL_ID` is available in your region/account
+### Replicate API Errors
+- **401 Unauthorized**: Check `REPLICATE_API_TOKEN` is correct
+- **402 Payment Required**: Add credits to your Replicate account
+- **429 Rate Limited**: Wait and retry with exponential backoff
+- **500 Server Error**: Replicate service issue, retry later
 
 ### Invalid JSON Responses
 - Granite sometimes returns markdown-wrapped JSON
@@ -190,7 +156,7 @@ They are configured as **public** (no JWT required) for MVP testing.
 
 ## Next Steps
 
-1. **Provide IBM Credentials**: Add all 5 secrets listed above
+1. **Provide Replicate Token**: Add the `REPLICATE_API_TOKEN` secret
 2. **Test Analysis**: Run analysis on seed transcripts
 3. **Review Results**: Check Requirements, Tech Spec, and Sales Brief tabs
 4. **Iterate on Prompts**: Tweak the Granite prompt in `analyze-transcript/index.ts` for better extraction
@@ -204,13 +170,12 @@ They are configured as **public** (no JWT required) for MVP testing.
 - [ ] Add rate limiting on edge functions
 - [ ] Configure proper JWT secret for share links
 - [ ] Add error monitoring and alerting
-- [ ] Implement retry logic for Granite API calls
+- [ ] Implement retry logic for Replicate API calls
 - [ ] Add usage tracking and cost monitoring
 - [ ] Configure backup and disaster recovery
 
 ## Documentation References
 
-- [IBM watsonx.ai Text Generation API](https://cloud.ibm.com/apidocs/watsonx-ai#text-generation)
-- [IBM Cloud IAM Token](https://cloud.ibm.com/docs/account?topic=account-iamtoken_from_apikey)
-- [IBM Supported Models](https://dataplatform.cloud.ibm.com/docs/content/wsj/analyze-data/fm-models.html)
+- [Replicate Documentation](https://replicate.com/docs)
+- [IBM Granite Models on Replicate](https://replicate.com/ibm-granite)
 - [Lovable Cloud Docs](https://docs.lovable.dev/features/cloud)
