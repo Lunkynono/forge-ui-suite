@@ -3,11 +3,11 @@ import { Navigation } from "@/components/Navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { useProjectStore } from "@/store/projectStore";
+import { useProjects } from "@/hooks/useProjects";
 import { ArrowRight, Database, FileText, TrendingUp, Zap } from "lucide-react";
 
 const Index = () => {
-  const { projects } = useProjectStore();
+  const { data: projects = [], isLoading } = useProjects();
   const navigate = useNavigate();
 
   // Redirect to single project if only one exists
@@ -98,23 +98,37 @@ const Index = () => {
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
-            {projects.slice(0, 3).map((project) => (
-              <Link key={project.id} to={`/projects/${project.id}`}>
-                <Card className="shadow-soft hover:shadow-elegant transition-all duration-300 hover:-translate-y-1 cursor-pointer h-full">
+            {isLoading ? (
+              [...Array(3)].map((_, i) => (
+                <Card key={i} className="shadow-soft h-full">
                   <CardHeader>
-                    <CardTitle className="text-lg">{project.name}</CardTitle>
-                    <CardDescription className="line-clamp-2">
-                      {project.description}
-                    </CardDescription>
+                    <div className="h-5 bg-muted animate-pulse rounded" />
+                    <div className="h-4 bg-muted animate-pulse rounded w-2/3 mt-2" />
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      Updated {new Date(project.createdAt).toLocaleDateString()}
-                    </p>
+                    <div className="h-4 bg-muted animate-pulse rounded w-1/2" />
                   </CardContent>
                 </Card>
-              </Link>
-            ))}
+              ))
+            ) : (
+              projects.slice(0, 3).map((project) => (
+                <Link key={project.id} to={`/projects/${project.id}`}>
+                  <Card className="shadow-soft hover:shadow-elegant transition-all duration-300 hover:-translate-y-1 cursor-pointer h-full">
+                    <CardHeader>
+                      <CardTitle className="text-lg">{project.name}</CardTitle>
+                      <CardDescription className="line-clamp-2">
+                        {project.description}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        Updated {new Date(project.created_at).toLocaleDateString()}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))
+            )}
           </div>
         </div>
       </section>
