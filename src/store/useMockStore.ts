@@ -3,6 +3,7 @@ import projectsData from '@/mocks/projects.json';
 import meetingsData from '@/mocks/meetings.json';
 import transcriptsData from '@/mocks/transcripts.json';
 import analysesData from '@/mocks/analyses.json';
+import { analyzeTranscript, type AnalysisResult } from '@/lib/analyzeTranscript.mock';
 
 export interface Project {
   id: string;
@@ -57,10 +58,10 @@ export interface Analysis {
   id: string;
   transcriptId: string;
   projectId: string;
-  type: 'sentiment' | 'topics' | 'action_items' | 'summary';
+  type: 'sentiment' | 'topics' | 'action_items' | 'summary' | 'requirements';
   status: 'pending' | 'processing' | 'completed' | 'failed';
   createdAt: string;
-  results?: Record<string, any>;
+  results?: Record<string, any> | AnalysisResult;
 }
 
 interface MockStore {
@@ -115,6 +116,8 @@ export const useMockStore = create<MockStore>((set, get) => ({
     const transcript = get().transcripts.find((t) => t.id === transcriptId);
     if (!transcript) return;
 
+    const project = get().projects.find((p) => p.id === transcript.projectId);
+
     const newAnalysis: Analysis = {
       id: `analysis-${Date.now()}`,
       transcriptId,
@@ -131,52 +134,72 @@ export const useMockStore = create<MockStore>((set, get) => ({
     // Simulate analysis processing
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
-    // Mock results based on type
-    let results: Record<string, any> = {};
+    let results: Record<string, any> | AnalysisResult = {};
     
-    switch (type) {
-      case 'sentiment':
+    // Use the mock analyzer for comprehensive analysis
+    if (type === 'sentiment' || type === 'requirements') {
+      const analysisResult = analyzeTranscript(
+        transcript.content,
+        project?.name || 'Customer'
+      );
+      
+      if (type === 'requirements') {
+        // Return full structured analysis
+        results = analysisResult;
+      } else {
+        // For sentiment, derive from needs/wants analysis
+        const totalItems = analysisResult.needs.length + analysisResult.wants.length;
+        const p0Count = analysisResult.needs.filter(n => n.priority === 'P0').length;
+        const positiveRatio = totalItems > 0 ? (analysisResult.needs.length / totalItems) : 0.5;
+        
         results = {
-          overall: 'positive',
-          score: Math.random() * 0.3 + 0.6,
+          overall: p0Count > 2 ? 'urgent' : positiveRatio > 0.6 ? 'positive' : 'neutral',
+          score: positiveRatio,
           breakdown: {
-            positive: Math.random() * 0.3 + 0.5,
-            neutral: Math.random() * 0.2 + 0.2,
-            negative: Math.random() * 0.1,
+            positive: positiveRatio,
+            neutral: 1 - positiveRatio,
+            negative: analysisResult.risks.length / 10,
           },
+          needs_count: analysisResult.needs.length,
+          wants_count: analysisResult.wants.length,
+          risks_count: analysisResult.risks.length,
         };
-        break;
-      case 'topics':
-        results = {
-          topics: [
-            { name: 'Strategy', confidence: 0.89, mentions: 12 },
-            { name: 'Market Analysis', confidence: 0.82, mentions: 8 },
-            { name: 'Product Development', confidence: 0.76, mentions: 6 },
-          ],
-        };
-        break;
-      case 'action_items':
-        results = {
-          items: [
-            {
-              text: 'Follow up with stakeholders',
-              assignee: transcript.speakers[0]?.name || 'Unassigned',
-              priority: 'high',
-              dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            },
-          ],
-        };
-        break;
-      case 'summary':
-        results = {
-          summary: 'This meeting covered key strategic initiatives and market opportunities.',
-          keyPoints: [
-            'Discussed market expansion strategy',
-            'Reviewed competitive landscape',
-            'Identified action items for next quarter',
-          ],
-        };
-        break;
+      }
+    } else {
+      // Fallback for other analysis types
+      switch (type) {
+        case 'topics':
+          results = {
+            topics: [
+              { name: 'Strategy', confidence: 0.89, mentions: 12 },
+              { name: 'Market Analysis', confidence: 0.82, mentions: 8 },
+              { name: 'Product Development', confidence: 0.76, mentions: 6 },
+            ],
+          };
+          break;
+        case 'action_items':
+          results = {
+            items: [
+              {
+                text: 'Follow up with stakeholders',
+                assignee: transcript.speakers[0]?.name || 'Unassigned',
+                priority: 'high',
+                dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              },
+            ],
+          };
+          break;
+        case 'summary':
+          results = {
+            summary: 'This meeting covered key strategic initiatives and market opportunities.',
+            keyPoints: [
+              'Discussed market expansion strategy',
+              'Reviewed competitive landscape',
+              'Identified action items for next quarter',
+            ],
+          };
+          break;
+      }
     }
 
     set((state) => ({
