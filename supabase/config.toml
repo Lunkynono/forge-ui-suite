@@ -1,1 +1,10 @@
 project_id = "osqpsyoyekjbncpbgeen"
+
+[functions.analyze-transcript]
+verify_jwt = false
+
+[functions.create-share-link]
+verify_jwt = false
+
+[functions.verify-share-token]
+verify_jwt = false
