@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -13,52 +13,54 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { useMockStore } from "@/store/useMockStore";
-import { AnalysisReportViewer } from "@/components/AnalysisReportViewer";
 import { ShareDialog } from "@/components/ShareDialog";
-import { TranscriptPanel } from "@/components/TranscriptPanel";
-import { BarChart3, Calendar, FileText, Settings, Share2, Sparkles, Clock, User, Filter, Search, Printer, Info } from "lucide-react";
+import { BarChart3, Calendar, FileText, Settings, Share2, Sparkles, Clock, User, Filter, Search, Printer, Info, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import type { AnalysisResult, RequirementItem } from "@/lib/analyzeTranscript.mock";
-import type { Transcript, Meeting } from "@/store/useMockStore";
+import { useProjects } from "@/hooks/useProjects";
+import { useMeetings } from "@/hooks/useMeetings";
+import { useTranscripts } from "@/hooks/useTranscripts";
+import { useRequirements } from "@/hooks/useRequirements";
+import { useStartAnalysis, useLatestAnalysis } from "@/hooks/useAnalysis";
 
 const ProjectDetail = () => {
   const { id } = useParams();
-  const { projects, meetings, transcripts, analyses, runMockAnalysis, getProjectMeetings, getProjectTranscripts } = useMockStore();
+  
+  const { data: projects } = useProjects();
+  const { data: meetings = [] } = useMeetings(id || '');
+  const { data: transcripts = [] } = useTranscripts(id || '');
+  const { data: requirements = [] } = useRequirements(id || '');
+  const startAnalysis = useStartAnalysis();
+  
+  const project = projects?.find(p => p.id === id);
+  const firstTranscript = transcripts[0];
+  const { data: latestAnalysis, isLoading: analysisLoading } = useLatestAnalysis(firstTranscript?.id || '');
   
   const [activeTab, setActiveTab] = useState("overview");
-  const [requirementFilter, setRequirementFilter] = useState<"all" | "need" | "want">("all");
+  const [requirementFilter, setRequirementFilter] = useState<"all" | "NEED" | "WANT">("all");
   const [priorityFilter, setPriorityFilter] = useState<"all" | "P0" | "P1" | "P2" | "P3">("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRequirement, setSelectedRequirement] = useState<(RequirementItem & { type: 'need' | 'want' }) | null>(null);
+  const [selectedRequirement, setSelectedRequirement] = useState<any | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [selectedTranscript, setSelectedTranscript] = useState<Transcript | null>(null);
-  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
-
-  const project = projects.find(p => p.id === id);
-  const projectMeetings = project ? getProjectMeetings(project.id) : [];
-  const projectTranscripts = project ? getProjectTranscripts(project.id) : [];
-  
-  // Get latest requirements analysis
-  const requirementsAnalysis = analyses.find(
-    a => a.projectId === id && a.type === 'requirements' && a.status === 'completed'
-  );
 
   const handleRunAnalysis = async () => {
-    if (projectTranscripts.length === 0) {
+    if (!firstTranscript) {
       toast.error("No transcripts available for analysis");
       return;
     }
 
     setIsAnalyzing(true);
-    toast.loading("Running requirements analysis...", { id: 'analysis' });
+    toast.loading("Starting analysis...", { id: 'analysis' });
     
-    // Analyze first transcript
-    await runMockAnalysis(projectTranscripts[0].id, 'requirements');
-    
-    setIsAnalyzing(false);
-    toast.success("Analysis complete!", { id: 'analysis' });
+    try {
+      await startAnalysis.mutateAsync(firstTranscript.id);
+      toast.success("Analysis started! Results will appear shortly.", { id: 'analysis' });
+    } catch (error) {
+      toast.error("Failed to start analysis", { id: 'analysis' });
+      console.error(error);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   if (!project) {
@@ -73,19 +75,9 @@ const ProjectDetail = () => {
     );
   }
 
-  const analysisResults = requirementsAnalysis?.results as AnalysisResult | undefined;
-  
-  // Combine needs and wants for requirements table
-  const allRequirements = analysisResults 
-    ? [
-        ...analysisResults.needs.map(n => ({ ...n, type: 'need' as const })),
-        ...analysisResults.wants.map(w => ({ ...w, type: 'want' as const }))
-      ]
-    : [];
-
-  // Apply filters and search
-  const filteredRequirements = allRequirements.filter(req => {
-    if (requirementFilter !== 'all' && req.type !== requirementFilter) return false;
+  // Apply filters and search to requirements
+  const filteredRequirements = requirements.filter(req => {
+    if (requirementFilter !== 'all' && req.kind !== requirementFilter) return false;
     if (priorityFilter !== 'all' && req.priority !== priorityFilter) return false;
     if (searchQuery && !req.text.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
@@ -98,10 +90,16 @@ const ProjectDetail = () => {
     if (priorityDiff !== 0) return priorityDiff;
     
     // If same priority, NEED comes before WANT
-    if (a.type === 'need' && b.type === 'want') return -1;
-    if (a.type === 'want' && b.type === 'need') return 1;
+    if (a.kind === 'NEED' && b.kind === 'WANT') return -1;
+    if (a.kind === 'WANT' && b.kind === 'NEED') return 1;
     return 0;
   });
+
+  // Create analysis results from latest analysis
+  const analysisResults = latestAnalysis ? {
+    techReportMd: latestAnalysis.tech_report_md || '',
+    salesReportMd: latestAnalysis.sales_report_md || '',
+  } : null;
 
   const handlePrint = () => {
     window.print();
@@ -156,7 +154,7 @@ const ProjectDetail = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold">{projectMeetings.length}</div>
+                  <div className="text-3xl font-bold">{meetings.length}</div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Total recorded
                   </p>
@@ -170,7 +168,7 @@ const ProjectDetail = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold">{projectTranscripts.length}</div>
+                  <div className="text-3xl font-bold">{transcripts.length}</div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Ready for analysis
                   </p>
@@ -185,7 +183,7 @@ const ProjectDetail = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold">
-                    {Math.floor((Date.now() - new Date(project.updatedAt).getTime()) / (1000 * 60 * 60))}h
+                    {Math.floor((Date.now() - new Date(project.updated_at).getTime()) / (1000 * 60 * 60))}h
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">ago</p>
                 </CardContent>
@@ -204,13 +202,20 @@ const ProjectDetail = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button 
-                  onClick={handleRunAnalysis} 
-                  disabled={isAnalyzing || projectTranscripts.length === 0}
-                  className="w-full gap-2"
-                >
-                  {isAnalyzing ? "Analyzing..." : "Run Analysis"}
-                </Button>
+                {latestAnalysis?.status === 'PROCESSING' || latestAnalysis?.status === 'PENDING' ? (
+                  <div className="flex items-center justify-center gap-2 py-4">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Analysis in progress...</span>
+                  </div>
+                ) : (
+                  <Button 
+                    onClick={handleRunAnalysis} 
+                    disabled={isAnalyzing || transcripts.length === 0}
+                    className="w-full gap-2"
+                  >
+                    {isAnalyzing ? "Starting..." : "Run Analysis"}
+                  </Button>
+                )}
               </CardContent>
             </Card>
 
@@ -223,10 +228,10 @@ const ProjectDetail = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {projectMeetings.length > 0 ? (
+                {meetings.length > 0 ? (
                   <div className="space-y-3">
-                    {projectMeetings.slice(0, 5).map((meeting) => {
-                      const meetingTranscript = projectTranscripts.find(t => t.meetingId === meeting.id);
+                    {meetings.slice(0, 5).map((meeting) => {
+                      const meetingTranscript = transcripts.find(t => t.meeting_id === meeting.id);
                       return (
                         <div
                           key={meeting.id}
@@ -235,22 +240,12 @@ const ProjectDetail = () => {
                           <div className="flex-1">
                             <h4 className="font-medium">{meeting.title}</h4>
                             <p className="text-xs text-muted-foreground">
-                              {new Date(meeting.date).toLocaleDateString()} • {Math.floor(meeting.duration / 60)}m
+                              {new Date(meeting.date).toLocaleDateString()}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge variant="outline">{meeting.language.toUpperCase()}</Badge>
                             {meetingTranscript && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedMeeting(meeting);
-                                  setSelectedTranscript(meetingTranscript);
-                                }}
-                              >
-                                View Transcript
-                              </Button>
+                              <Badge variant="outline">Has Transcript</Badge>
                             )}
                           </div>
                         </div>
@@ -276,30 +271,26 @@ const ProjectDetail = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {projectTranscripts.length > 0 ? (
+                {transcripts.length > 0 ? (
                   <div className="space-y-3">
-                    {projectTranscripts.slice(0, 5).map((transcript) => (
+                    {transcripts.slice(0, 5).map((transcript) => {
+                      const meeting = meetings.find(m => m.id === transcript.meeting_id);
+                      return (
                       <div
-                        key={transcript.id}
-                        className="flex items-start gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors"
-                      >
-                        <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
-                        <div className="flex-1">
-                          <h4 className="font-medium line-clamp-1">{transcript.title}</h4>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {Math.floor(transcript.duration / 60)}m
-                            </span>
-                            <span>{transcript.wordCount.toLocaleString()} words</span>
-                            <span>{transcript.speakers.length} speakers</span>
+                          key={transcript.id}
+                          className="flex items-start gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors"
+                        >
+                          <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
+                          <div className="flex-1">
+                            <h4 className="font-medium line-clamp-1">{meeting?.title || 'Transcript'}</h4>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                              <span>{transcript.language.toUpperCase()}</span>
+                              <span>{transcript.content.split(' ').length.toLocaleString()} words</span>
+                            </div>
                           </div>
                         </div>
-                        <Badge variant={transcript.status === 'processed' ? 'default' : 'secondary'}>
-                          {transcript.status}
-                        </Badge>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <EmptyState
@@ -340,19 +331,19 @@ const ProjectDetail = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="flex gap-4">
-                        <div className="flex-1">
-                          <Select value={requirementFilter} onValueChange={(v: any) => setRequirementFilter(v)}>
-                            <SelectTrigger className="bg-background">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="bg-popover z-50">
-                              <SelectItem value="all">All Types</SelectItem>
-                              <SelectItem value="need">Needs Only</SelectItem>
-                              <SelectItem value="want">Wants Only</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        <div className="flex gap-4">
+                          <div className="flex-1">
+                            <Select value={requirementFilter} onValueChange={(v: any) => setRequirementFilter(v)}>
+                              <SelectTrigger className="bg-background">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-popover z-50">
+                                <SelectItem value="all">All Types</SelectItem>
+                                <SelectItem value="NEED">Needs Only</SelectItem>
+                                <SelectItem value="WANT">Wants Only</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         <div className="flex-1">
                           <Select value={priorityFilter} onValueChange={(v: any) => setPriorityFilter(v)}>
                             <SelectTrigger className="bg-background">
@@ -405,10 +396,10 @@ const ProjectDetail = () => {
                         </TableHeader>
                         <TableBody>
                           {sortedRequirements.map((req, idx) => (
-                            <TableRow key={idx}>
+                            <TableRow key={req.id}>
                               <TableCell>
-                                <Badge variant={req.type === 'need' ? 'default' : 'secondary'}>
-                                  {req.type.toUpperCase()}
+                                <Badge variant={req.kind === 'NEED' ? 'default' : 'secondary'}>
+                                  {req.kind}
                                 </Badge>
                               </TableCell>
                               <TableCell>
@@ -422,12 +413,12 @@ const ProjectDetail = () => {
                                   {req.priority}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="font-medium">{req.category}</TableCell>
+                              <TableCell className="font-medium">—</TableCell>
                               <TableCell className="max-w-md">
                                 <p className="line-clamp-2">{req.text}</p>
                               </TableCell>
                               <TableCell className="text-sm text-muted-foreground">
-                                {req.speaker || '—'}
+                                {req.source_speaker || '—'}
                               </TableCell>
                               <TableCell>
                                 <Button
@@ -457,7 +448,7 @@ const ProjectDetail = () => {
 
           {/* TECH SPEC TAB */}
           <TabsContent value="tech-spec" className="mt-6">
-            {!analysisResults ? (
+            {!analysisResults || !analysisResults.techReportMd ? (
               <Card className="shadow-soft">
                 <CardContent className="py-12">
                   <EmptyState
@@ -476,21 +467,27 @@ const ProjectDetail = () => {
                 <Alert className="mb-6">
                   <Info className="h-4 w-4" />
                   <AlertDescription>
-                    This specification is based on the latest analysis of transcript from{' '}
-                    {new Date(requirementsAnalysis?.createdAt || '').toLocaleDateString()}
+                    This specification is based on the latest analysis from{' '}
+                    {new Date(latestAnalysis?.created_at || '').toLocaleDateString()}
                   </AlertDescription>
                 </Alert>
-                <AnalysisReportViewer
-                  analysis={analysisResults}
-                  analysisId={requirementsAnalysis?.id || 'default'}
-                />
+                <Card className="shadow-elegant">
+                  <CardHeader>
+                    <CardTitle>Technical Specification</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="prose prose-sm max-w-none dark:prose-invert">
+                      {analysisResults.techReportMd}
+                    </div>
+                  </CardContent>
+                </Card>
               </>
             )}
           </TabsContent>
 
           {/* SALES BRIEF TAB */}
           <TabsContent value="sales-brief" className="mt-6">
-            {!analysisResults ? (
+            {!analysisResults || !analysisResults.salesReportMd ? (
               <Card className="shadow-soft">
                 <CardContent className="py-12">
                   <EmptyState
@@ -509,14 +506,20 @@ const ProjectDetail = () => {
                 <Alert className="mb-6">
                   <Info className="h-4 w-4" />
                   <AlertDescription>
-                    This brief is based on the latest analysis of transcript from{' '}
-                    {new Date(requirementsAnalysis?.createdAt || '').toLocaleDateString()}
+                    This brief is based on the latest analysis from{' '}
+                    {new Date(latestAnalysis?.created_at || '').toLocaleDateString()}
                   </AlertDescription>
                 </Alert>
-                <AnalysisReportViewer
-                  analysis={analysisResults}
-                  analysisId={requirementsAnalysis?.id || 'default'}
-                />
+                <Card className="shadow-elegant">
+                  <CardHeader>
+                    <CardTitle>Sales Brief</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="prose prose-sm max-w-none dark:prose-invert">
+                      {analysisResults.salesReportMd}
+                    </div>
+                  </CardContent>
+                </Card>
               </>
             )}
           </TabsContent>
@@ -528,12 +531,6 @@ const ProjectDetail = () => {
           onOpenChange={setShareDialogOpen}
           projectId={project.id}
           projectName={project.name}
-        />
-
-        <TranscriptPanel
-          open={!!selectedTranscript}
-          onOpenChange={(open) => !open && setSelectedTranscript(null)}
-          transcript={selectedTranscript}
         />
 
         {/* View Source Dialog */}
@@ -548,8 +545,8 @@ const ProjectDetail = () => {
             {selectedRequirement && (
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <Badge variant={selectedRequirement.type === 'need' ? 'default' : 'secondary'}>
-                    {selectedRequirement.type.toUpperCase()}
+                  <Badge variant={selectedRequirement.kind === 'NEED' ? 'default' : 'secondary'}>
+                    {selectedRequirement.kind}
                   </Badge>
                   <Badge 
                     variant={
@@ -560,29 +557,32 @@ const ProjectDetail = () => {
                   >
                     {selectedRequirement.priority}
                   </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {selectedRequirement.category}
-                  </span>
                 </div>
 
                 <div className="border rounded-lg p-4 bg-secondary/50">
                   <p className="text-sm leading-relaxed">{selectedRequirement.text}</p>
                 </div>
 
-                {(selectedRequirement.speaker || selectedRequirement.timestamp) && (
+                {(selectedRequirement.source_speaker || selectedRequirement.source_timestamp) && (
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    {selectedRequirement.speaker && (
+                    {selectedRequirement.source_speaker && (
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4" />
-                        <span>{selectedRequirement.speaker}</span>
+                        <span>{selectedRequirement.source_speaker}</span>
                       </div>
                     )}
-                    {selectedRequirement.timestamp && (
+                    {selectedRequirement.source_timestamp && (
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4" />
-                        <span>{selectedRequirement.timestamp}</span>
+                        <span>{selectedRequirement.source_timestamp}</span>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {selectedRequirement.source_quote && (
+                  <div className="border-l-2 border-primary pl-4">
+                    <p className="text-sm italic text-muted-foreground">{selectedRequirement.source_quote}</p>
                   </div>
                 )}
               </div>

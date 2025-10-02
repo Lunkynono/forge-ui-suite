@@ -11,9 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { FileText, Sparkles, Upload, Clock } from "lucide-react";
-import { useMockStore } from "@/store/useMockStore";
 import { toast } from "sonner";
 import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
+import { useMeetings } from "@/hooks/useMeetings";
+import { useTranscripts } from "@/hooks/useTranscripts";
+import { useStartAnalysis } from "@/hooks/useAnalysis";
+import { useProjects } from "@/hooks/useProjects";
 
 const transcriptSchema = z.object({
   content: z.string()
@@ -26,28 +30,38 @@ const transcriptSchema = z.object({
 
 const Ingest = () => {
   const navigate = useNavigate();
-  const { transcripts, meetings, currentProject, addTranscript, addMeeting, runMockAnalysis, loadExampleTranscripts } = useMockStore();
+  const { data: projects } = useProjects();
+  const currentProject = projects?.[0]; // Use first project for now
+  
+  const { data: meetings = [] } = useMeetings(currentProject?.id || '');
+  const { data: transcripts = [] } = useTranscripts(currentProject?.id || '');
+  const startAnalysis = useStartAnalysis();
   
   const [content, setContent] = useState("");
-  const [language, setLanguage] = useState("");
+  const [language, setLanguage] = useState("en");
   const [meetingId, setMeetingId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newMeetingTitle, setNewMeetingTitle] = useState("");
   const [showNewMeeting, setShowNewMeeting] = useState(false);
   
-  // Get sample transcripts - filter for examples only
-  const sampleTranscripts = transcripts.filter(t => t.metadata.source === 'example').slice(0, 2);
+  // Get sample transcripts (empty for now - can add examples later)
+  const sampleTranscripts: any[] = [];
   
   // Get meetings for current project
-  const projectMeetings = meetings.filter(m => m.projectId === currentProject);
+  const projectMeetings = meetings;
 
   const handleAnalyze = async (transcriptId: string) => {
-    toast.loading("Running analysis...", { id: transcriptId });
-    await runMockAnalysis(transcriptId, "sentiment");
-    toast.success("Analysis complete!", { id: transcriptId });
+    toast.loading("Starting analysis...", { id: transcriptId });
+    try {
+      await startAnalysis.mutateAsync(transcriptId);
+      toast.success("Analysis started! View progress in project details.", { id: transcriptId });
+    } catch (error) {
+      toast.error("Failed to start analysis", { id: transcriptId });
+      console.error(error);
+    }
   };
 
-  const handleCreateMeeting = () => {
+  const handleCreateMeeting = async () => {
     if (!newMeetingTitle.trim()) {
       toast.error("Please enter a meeting title");
       return;
@@ -58,21 +72,27 @@ const Ingest = () => {
       return;
     }
 
-    addMeeting({
-      projectId: currentProject,
-      title: newMeetingTitle,
-      date: new Date().toISOString(),
-      duration: 0,
-      participants: [],
-      transcriptIds: [],
-      status: 'scheduled',
-      language: language || 'en',
-    });
+    try {
+      const { data, error } = await supabase
+        .from('meetings')
+        .insert({
+          project_id: currentProject.id,
+          title: newMeetingTitle,
+          date: new Date().toISOString(),
+        })
+        .select()
+        .single();
 
-    // The meeting will be added to the store, just clear the form
-    setNewMeetingTitle("");
-    setShowNewMeeting(false);
-    toast.success("Meeting created!");
+      if (error) throw error;
+
+      setMeetingId(data.id);
+      setNewMeetingTitle("");
+      setShowNewMeeting(false);
+      toast.success("Meeting created!");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to create meeting");
+    }
   };
 
   const handleSubmit = async () => {
@@ -92,42 +112,40 @@ const Ingest = () => {
         return;
       }
 
-      // Create new transcript
-      const newTranscript = {
-        meetingId: validated.meetingId,
-        projectId: meeting.projectId,
-        title: `${meeting.title} - Manual Upload`,
-        language: validated.language,
-        duration: Math.floor(validated.content.split(' ').length / 150 * 60), // Estimate ~150 wpm
-        wordCount: validated.content.split(' ').length,
-        content: validated.content,
-        speakers: [
-          {
-            id: 'spk-manual',
-            name: 'Speaker',
-            segments: 1,
-          }
-        ],
-        metadata: {
-          recordingQuality: 'manual',
-          source: 'manual_upload',
-          version: 1,
-        }
-      };
+      // Create new transcript in Supabase
+      const { data: transcript, error: transcriptError } = await supabase
+        .from('transcripts')
+        .insert({
+          meeting_id: validated.meetingId,
+          language: validated.language,
+          content: validated.content,
+        })
+        .select()
+        .single();
 
-      addTranscript(newTranscript);
-      
+      if (transcriptError) throw transcriptError;
+
       toast.success("Transcript created successfully!");
+      
+      // Start analysis immediately
+      toast.loading("Starting analysis...", { id: 'analysis' });
+      try {
+        await startAnalysis.mutateAsync(transcript.id);
+        toast.success("Analysis started!", { id: 'analysis' });
+      } catch (analysisError) {
+        console.error(analysisError);
+        toast.error("Transcript saved but analysis failed to start", { id: 'analysis' });
+      }
       
       // Clear form
       setContent("");
-      setLanguage("");
+      setLanguage("en");
       setMeetingId("");
       
       // Navigate to project detail
       setTimeout(() => {
-        navigate(`/projects/${meeting.projectId}`);
-      }, 1000);
+        navigate(`/projects/${meeting.project_id}`);
+      }, 1500);
       
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -135,6 +153,7 @@ const Ingest = () => {
         toast.error(firstError.message);
       } else {
         toast.error("Failed to create transcript");
+        console.error(error);
       }
     } finally {
       setIsSubmitting(false);
@@ -212,15 +231,8 @@ const Ingest = () => {
                 
                 {sampleTranscripts.length === 0 && (
                   <div className="text-center py-8">
-                    <p className="text-muted-foreground mb-4">No example transcripts loaded</p>
-                    <Button 
-                      variant="outline" 
-                      onClick={loadExampleTranscripts}
-                      className="gap-2"
-                    >
-                      <FileText className="h-4 w-4" />
-                      Load Examples
-                    </Button>
+                    <p className="text-muted-foreground">No example transcripts available</p>
+                    <p className="text-sm text-muted-foreground mt-1">Upload a transcript to get started</p>
                   </div>
                 )}
               </div>
